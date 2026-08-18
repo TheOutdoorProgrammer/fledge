@@ -33,11 +33,17 @@ No signing certificate, private key, or Apple credential is needed by the server
 ## Install
 
 ```console
+brew install theoutdoorprogrammer/tap/fledge
+```
+
+Or grab a binary from [the releases](https://github.com/TheOutdoorProgrammer/fledge/releases), or build it:
+
+```console
 make install          # the CLI, into ~/bin
 make build            # both binaries, into bin/
 ```
 
-The server also ships as a container image and reads everything from the environment.
+The server ships as a container image, `ghcr.io/theoutdoorprogrammer/fledge`, and reads everything from the environment.
 
 ## Releasing a build
 

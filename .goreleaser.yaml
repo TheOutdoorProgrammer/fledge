@@ -36,6 +36,38 @@ archives:
 checksum:
   name_template: checksums.txt
 
+# Casks, not formulas: `brews` is hard-deprecated as of GoReleaser v2.16.
+homebrew_casks:
+  - name: fledge
+    binaries: [fledge]
+    # `auto` skips a prerelease, so a candidate never becomes what
+    # `brew install fledge` gives you.
+    skip_upload: auto
+    repository:
+      owner: TheOutdoorProgrammer
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    homepage: https://github.com/TheOutdoorProgrammer/fledge
+    description: Release ad hoc iOS builds to your own devices
+    # The binary is not signed or notarised, so Gatekeeper quarantines it and
+    # the first run fails with "developer cannot be verified".
+    hooks:
+      post:
+        install: |
+          if OS.mac?
+            system_command "/usr/bin/xattr",
+              args: ["-dr", "com.apple.quarantine", "#{staged_path}/fledge"]
+          end
+    caveats: |
+      Point it at a server and it reads the rest from fledge.yaml:
+
+        export FLEDGE_URL=https://fledge.example
+        export FLEDGE_TOKEN=...
+        fledge release
+
+      Building needs Xcode. Publishing an already-exported archive does not.
+
 snapshot:
   version_template: "{{ .Tag }}-next"
 

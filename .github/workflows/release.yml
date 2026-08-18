@@ -21,12 +21,24 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      # A token scoped to the tap only. The default GITHUB_TOKEN cannot write to
+      # another repository, so without this the cask is silently never updated.
+      - name: Mint a token for the tap
+        id: tap_token
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.TAP_APP_ID }}
+          private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: homebrew-tap
+
       - uses: goreleaser/goreleaser-action@v6
         with:
           version: "~> v2"
           args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.tap_token.outputs.token }}
 
   image:
     runs-on: ubuntu-latest
