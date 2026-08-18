@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
 )
 
 // Client is a Fledge API client.

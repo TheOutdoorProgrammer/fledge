@@ -10,7 +10,7 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/ipa"
+	"github.com/theoutdoorprogrammer/fledge/internal/ipa"
 )
 
 func inspectCommand(args []string) error {

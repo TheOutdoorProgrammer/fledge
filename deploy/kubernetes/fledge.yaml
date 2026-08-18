@@ -42,7 +42,7 @@ spec:
         fsGroup: 65532
       containers:
         - name: fledged
-          image: ghcr.io/nerdswhofish/fledge:latest
+          image: ghcr.io/theoutdoorprogrammer/fledge:latest
           ports:
             - name: http
               containerPort: 8080

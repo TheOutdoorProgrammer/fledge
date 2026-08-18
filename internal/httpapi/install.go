@@ -11,20 +11,23 @@ import (
 
 	"rsc.io/qr"
 
-	"github.com/nerdswhofish/fledge/internal/manifest"
-	"github.com/nerdswhofish/fledge/internal/store"
-	"github.com/nerdswhofish/fledge/internal/web"
+	"github.com/theoutdoorprogrammer/fledge/internal/manifest"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/web"
 )
 
 // expiryWarning is how close a provisioning profile has to be to lapsing before
 // the install page starts nagging about it.
 const expiryWarning = 14 * 24 * time.Hour
 
-// Notice is a banner on an install or enrolment page.
+// Notice is a banner on an install or enrolment page. An Action turns it into a
+// form, which is how a change Fledge will not make on its own gets offered.
 type Notice struct {
-	Level string
-	Title string
-	Body  string
+	Level       string
+	Title       string
+	Body        string
+	Action      string
+	ActionLabel string
 }
 
 type installView struct {

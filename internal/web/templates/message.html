@@ -10,7 +10,14 @@
   <div class="notices">
     {{range .Notices}}
     <div class="notice {{.Level}}">
-      <div><strong>{{.Title}}</strong>{{.Body}}</div>
+      <div>
+        <strong>{{.Title}}</strong>{{.Body}}
+        {{if .Action}}
+        <form method="post" action="{{.Action}}" class="notice-action">
+          <button type="submit">{{.ActionLabel}}</button>
+        </form>
+        {{end}}
+      </div>
     </div>
     {{end}}
   </div>

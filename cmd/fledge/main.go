@@ -9,8 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/nerdswhofish/fledge/internal/client"
-	"github.com/nerdswhofish/fledge/internal/version"
+	"github.com/theoutdoorprogrammer/fledge/internal/client"
+	"github.com/theoutdoorprogrammer/fledge/internal/version"
 )
 
 const usage = `fledge — release ad hoc iOS builds to your own devices

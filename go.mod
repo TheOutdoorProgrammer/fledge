@@ -1,4 +1,4 @@
-module github.com/nerdswhofish/fledge
+module github.com/theoutdoorprogrammer/fledge
 
 go 1.26.5
 

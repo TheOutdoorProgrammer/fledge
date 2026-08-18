@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nerdswhofish/fledge/internal/config"
-	"github.com/nerdswhofish/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/config"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
 )
 
 const testToken = "test-token"

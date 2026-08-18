@@ -12,11 +12,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/asc"
-	"github.com/nerdswhofish/fledge/internal/config"
-	"github.com/nerdswhofish/fledge/internal/enroll"
-	"github.com/nerdswhofish/fledge/internal/store"
-	"github.com/nerdswhofish/fledge/internal/web"
+	"github.com/theoutdoorprogrammer/fledge/internal/asc"
+	"github.com/theoutdoorprogrammer/fledge/internal/config"
+	"github.com/theoutdoorprogrammer/fledge/internal/enroll"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/web"
 )
 
 // deviceCookie remembers which device a browser belongs to, so an install page

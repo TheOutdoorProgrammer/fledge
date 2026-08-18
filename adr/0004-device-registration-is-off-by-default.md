@@ -47,6 +47,12 @@ The pages a person drives are gated on that token; the callback iOS posts to and
 Fledge looks a UDID up before registering it, re-enables an existing disabled device rather than adding a new one, and states in the outcome whether a slot was actually consumed.
 When App Store Connect credentials are configured the registration page shows how much of the annual allowance is gone.
 
+Registering a device is the only write Fledge performs on a developer account without being asked, and it is unavoidable, because that is the point.
+Every other write is offered rather than taken.
+A device already registered under a different name than the one it reports is a real and common case, since a UDID added years ago by another tool keeps whatever label that tool gave it.
+Fledge reports the mismatch and offers a button, authorised by the enrolment cookie so a browser can only rename the device it just enrolled.
+It does not rename anything on its own: a page visit silently editing a developer account is a surprise, and the person looking at the page is the one who knows whether the old name meant something.
+
 Two constraints found the hard way and worth not rediscovering.
 The App Store Connect API key must hold the **Admin** role, because an Ad Hoc profile is a distribution profile and the Developer role cannot create one.
 Provisioning profiles are immutable, with no update endpoint at all, so adding a device means creating a replacement profile and deleting the old one afterwards rather than editing it.

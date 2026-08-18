@@ -218,11 +218,22 @@ func (c *Client) RegisterDevice(ctx context.Context, name, udid, platform string
 	}, true, nil
 }
 
+// RenameDevice changes a device's name on the team. It is the one write Fledge
+// never performs on its own, because a page visit should not edit a developer
+// account without being asked.
+func (c *Client) RenameDevice(ctx context.Context, id, name string) (*Device, error) {
+	return c.patchDevice(ctx, id, deviceAttributes{Name: name})
+}
+
 func (c *Client) setDeviceStatus(ctx context.Context, id, status string) (*Device, error) {
+	return c.patchDevice(ctx, id, deviceAttributes{Status: status})
+}
+
+func (c *Client) patchDevice(ctx context.Context, id string, attributes deviceAttributes) (*Device, error) {
 	body := map[string]any{"data": deviceResource{
 		Type:       "devices",
 		ID:         id,
-		Attributes: deviceAttributes{Status: status},
+		Attributes: attributes,
 	}}
 
 	var response struct {

@@ -36,6 +36,13 @@ type Device struct {
 	Enrolled   time.Time `json:"enrolled"`
 	Registered bool      `json:"registered"`
 	AppleID    string    `json:"apple_id,omitempty"`
+	AppleName  string    `json:"apple_name,omitempty"`
+}
+
+// Misnamed reports whether the developer account calls this device something
+// other than what the device calls itself.
+func (d *Device) Misnamed() bool {
+	return d.AppleName != "" && d.Name != "" && d.AppleName != d.Name
 }
 
 // PutDevice records or updates an enrolled device.

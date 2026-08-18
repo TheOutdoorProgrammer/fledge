@@ -13,9 +13,9 @@ ARG DATE=unknown
 
 RUN CGO_ENABLED=0 go build -trimpath \
     -ldflags "-s -w \
-      -X github.com/nerdswhofish/fledge/internal/version.Version=${VERSION} \
-      -X github.com/nerdswhofish/fledge/internal/version.Commit=${COMMIT} \
-      -X github.com/nerdswhofish/fledge/internal/version.Date=${DATE}" \
+      -X github.com/theoutdoorprogrammer/fledge/internal/version.Version=${VERSION} \
+      -X github.com/theoutdoorprogrammer/fledge/internal/version.Commit=${COMMIT} \
+      -X github.com/theoutdoorprogrammer/fledge/internal/version.Date=${DATE}" \
     -o /out/fledged ./cmd/fledged
 
 FROM gcr.io/distroless/static-debian12:nonroot

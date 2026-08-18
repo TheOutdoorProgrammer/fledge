@@ -8,7 +8,7 @@ import (
 	"os"
 	"sort"
 
-	"github.com/nerdswhofish/fledge/internal/asc"
+	"github.com/theoutdoorprogrammer/fledge/internal/asc"
 )
 
 func appleCommand(ctx context.Context, args []string) error {

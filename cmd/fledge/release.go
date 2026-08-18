@@ -10,9 +10,9 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/client"
-	"github.com/nerdswhofish/fledge/internal/ipa"
-	"github.com/nerdswhofish/fledge/internal/xcode"
+	"github.com/theoutdoorprogrammer/fledge/internal/client"
+	"github.com/theoutdoorprogrammer/fledge/internal/ipa"
+	"github.com/theoutdoorprogrammer/fledge/internal/xcode"
 )
 
 func releaseCommand(ctx context.Context, args []string) error {

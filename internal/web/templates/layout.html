@@ -168,6 +168,19 @@ main { width: min(calc(100% - 2rem), var(--page)); margin: 0 auto; }
 
 .notice::before { color: var(--muted); font: 800 .72rem/1.8 ui-monospace, "SF Mono", monospace; letter-spacing: .06em; content: "INFO"; }
 .notice strong { display: block; margin-bottom: .15rem; color: var(--fg); }
+.notice-action { margin: .6rem 0 0; }
+.notice-action button {
+  min-height: 40px;
+  padding: .4rem .9rem;
+  border: 1px solid var(--line);
+  border-radius: 3px 10px 3px 3px;
+  background: rgba(33, 34, 44, .9);
+  color: var(--fg);
+  font: 700 .82rem/1 inherit;
+  letter-spacing: .02em;
+  cursor: pointer;
+}
+.notice-action button:hover { border-color: var(--cyan); color: var(--cyan); }
 .notice.ok { border-left-color: var(--green); }
 .notice.ok::before { color: var(--green); content: "OK"; }
 .notice.warn { border-left-color: var(--orange); }

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/nerdswhofish/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
 )
 
 // uploadResponse is what the CLI prints after a successful release.

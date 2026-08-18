@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/ipa"
+	"github.com/theoutdoorprogrammer/fledge/internal/ipa"
 )
 
 // ErrNotFound is returned for any app, build or device that is not present.

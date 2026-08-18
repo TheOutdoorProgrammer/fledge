@@ -17,8 +17,8 @@ import (
 
 	"howett.net/plist"
 
-	"github.com/nerdswhofish/fledge/internal/enroll"
-	"github.com/nerdswhofish/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/enroll"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
 )
 
 const enrollToken = "enroll-token"

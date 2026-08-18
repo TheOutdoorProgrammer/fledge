@@ -11,11 +11,11 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/asc"
-	"github.com/nerdswhofish/fledge/internal/config"
-	"github.com/nerdswhofish/fledge/internal/httpapi"
-	"github.com/nerdswhofish/fledge/internal/store"
-	"github.com/nerdswhofish/fledge/internal/version"
+	"github.com/theoutdoorprogrammer/fledge/internal/asc"
+	"github.com/theoutdoorprogrammer/fledge/internal/config"
+	"github.com/theoutdoorprogrammer/fledge/internal/httpapi"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/version"
 )
 
 func main() {

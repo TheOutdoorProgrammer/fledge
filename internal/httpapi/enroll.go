@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/nerdswhofish/fledge/internal/asc"
-	"github.com/nerdswhofish/fledge/internal/enroll"
-	"github.com/nerdswhofish/fledge/internal/store"
-	"github.com/nerdswhofish/fledge/internal/web"
+	"github.com/theoutdoorprogrammer/fledge/internal/asc"
+	"github.com/theoutdoorprogrammer/fledge/internal/enroll"
+	"github.com/theoutdoorprogrammer/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/web"
 )
 
 // enrollCookie carries the enrolment token past the first navigation, so the
@@ -39,6 +39,7 @@ func (s *Server) enrollRoutes() {
 	s.mux.HandleFunc("GET /enroll/profile.mobileconfig", s.handleEnrollProfile)
 	s.mux.HandleFunc("POST /enroll/callback", s.handleEnrollCallback)
 	s.mux.HandleFunc("GET /enroll/done", s.handleEnrollDone)
+	s.mux.HandleFunc("POST /enroll/rename", s.handleEnrollRename)
 }
 
 // authorizedToEnroll gates the pages a person drives. The callback and the
@@ -255,8 +256,19 @@ func (s *Server) registerWithApple(r *http.Request, device *enroll.Device) Notic
 		}
 	}
 
-	if err := s.markRegistered(device.UDID, registered.ID); err != nil {
+	if err := s.markRegistered(device.UDID, registered.ID, registered.Name); err != nil {
 		s.log.Warn("could not record the Apple device id", "error", err)
+	}
+
+	if registered.Name != "" && registered.Name != device.DisplayName() {
+		return Notice{
+			Level: "warn",
+			Title: "Apple calls this device something else",
+			Body: "Your developer account has it as " + registered.Name + ", while the device reports " +
+				device.DisplayName() + ". Nothing is broken, but the name in the portal is misleading.",
+			Action:      "/enroll/rename",
+			ActionLabel: "Rename it to " + device.DisplayName(),
+		}
 	}
 
 	if consumed {
@@ -275,14 +287,55 @@ func (s *Server) registerWithApple(r *http.Request, device *enroll.Device) Notic
 	}
 }
 
-func (s *Server) markRegistered(udid, appleID string) error {
+func (s *Server) markRegistered(udid, appleID, appleName string) error {
 	device, err := s.store.Device(udid)
 	if err != nil {
 		return err
 	}
-	device.Registered, device.AppleID = true, appleID
+	device.Registered, device.AppleID, device.AppleName = true, appleID, appleName
 
 	return s.store.PutDevice(device)
+}
+
+// handleEnrollRename applies the rename the completion page offered. It is
+// authorised by the device cookie, so a browser can only rename the device it
+// enrolled, and it happens only because someone pressed the button.
+func (s *Server) handleEnrollRename(w http.ResponseWriter, r *http.Request) {
+	device := s.deviceFromCookie(r)
+	if device == nil || device.AppleID == "" || s.apple == nil {
+		s.enrollUnavailable(w)
+		return
+	}
+
+	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
+	defer cancel()
+
+	renamed, err := s.apple.RenameDevice(ctx, device.AppleID, device.Name)
+	if err != nil {
+		s.log.Error("apple rename failed", "udid", device.UDID, "error", err)
+		web.Render(w, http.StatusBadGateway, "message", map[string]any{
+			"Title":     s.cfg.Title,
+			"Heading":   "Apple would not rename it",
+			"Detail":    err.Error(),
+			"BackLink":  "/",
+			"BackLabel": "See published apps",
+		})
+		return
+	}
+
+	device.AppleName = renamed.Name
+	if err := s.store.PutDevice(device); err != nil {
+		s.log.Warn("could not record the new Apple name", "error", err)
+	}
+	s.log.Info("renamed an Apple device", "udid", device.UDID, "name", renamed.Name)
+
+	web.Render(w, http.StatusOK, "message", map[string]any{
+		"Title":     s.cfg.Title,
+		"Heading":   "Renamed",
+		"Detail":    "Your developer account now calls this device " + renamed.Name + ".",
+		"BackLink":  "/",
+		"BackLabel": "See published apps",
+	})
 }
 
 func (s *Server) enrollUnavailable(w http.ResponseWriter) {
