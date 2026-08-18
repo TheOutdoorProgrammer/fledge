@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"errors"
+	"html/template"
 	"net/http"
 	"strings"
 	"time"
@@ -34,10 +35,10 @@ type installView struct {
 	Installable  bool
 	Expired      bool
 	ExpiringSoon bool
-	InstallURL   string
+	InstallURL   template.URL
 	IconURL      string
 	BasePath     string
-	QRDataURI    string
+	QRDataURI    template.URL
 	Notices      []Notice
 }
 
@@ -118,9 +119,9 @@ func (s *Server) handleInstallPage(w http.ResponseWriter, r *http.Request) {
 		IsLatest:   len(history) > 0 && history[0].ID == build.ID,
 		BasePath:   base,
 		IconURL:    base + "/" + build.ID + "/icon.png",
-		InstallURL: manifest.InstallURL(s.URLFor(base + "/" + build.ID + "/manifest.plist")),
+		InstallURL: template.URL(manifest.InstallURL(s.URLFor(base + "/" + build.ID + "/manifest.plist"))),
 	}
-	view.QRDataURI = qrDataURI(s.URLFor(base + "/" + build.ID))
+	view.QRDataURI = template.URL(qrDataURI(s.URLFor(base + "/" + build.ID)))
 	view.Notices, view.Installable, view.Expired, view.ExpiringSoon = s.assess(build, r)
 
 	web.Render(w, http.StatusOK, "install", view)

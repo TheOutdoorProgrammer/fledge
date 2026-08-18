@@ -1,42 +1,61 @@
 {{define "title"}}Register this device{{end}}
 
 {{define "body"}}
-<div class="card">
-  <h1>Register this device</h1>
-  <p style="color:var(--muted);margin:0">Ad hoc builds only install on devices named in the provisioning profile. This reads the identifier iOS needs so builds can be signed for it.</p>
-</div>
+<header class="page-intro">
+  <div class="eyebrow">Device registration</div>
+  <h1>Put this device<br>on the flight list.</h1>
+  <p class="lede">Ad hoc builds only install on devices named in the provisioning profile. This reads the identifier iOS needs so the next build can include it.</p>
+</header>
 
 {{if .Capacity}}
-<div class="note {{.Capacity.Level}}">
-  <strong>{{.Capacity.Used}} of {{.Capacity.Limit}} {{.Capacity.Platform}} slots used this membership year</strong>
-  Apple does not return a slot when a device is removed. Only register devices you actually intend to build for.
+<div class="notices">
+  <div class="notice {{.Capacity.Level}}">
+    <div>
+      <strong>{{.Capacity.Used}} of {{.Capacity.Limit}} {{.Capacity.Platform}} slots used this membership year</strong>
+      Apple does not return a slot when a device is removed. Only register devices you actually intend to build for.
+    </div>
+  </div>
 </div>
 {{end}}
 
 {{if not .Signed}}
-<div class="note warn">
-  <strong>This profile is not signed</strong>
-  iOS will show it as unverified. Set a signing certificate on the server to remove the warning.
+<div class="notices">
+  <div class="notice warn">
+    <div>
+      <strong>This profile is not signed</strong>
+      iOS will show it as unverified. Set a signing certificate on the server to remove the warning.
+    </div>
+  </div>
 </div>
 {{end}}
 
-<div class="note">
-  <strong>Safari only</strong>
-  Configuration profiles do not download inside app browsers such as Slack or Gmail. If you opened this from a link, tap the share icon and choose Open in Safari first.
+<div class="notices">
+  <div class="notice">
+    <div>
+      <strong>Safari only</strong>
+      Configuration profiles do not download inside app browsers such as Slack or Gmail. If you opened this from a link, tap the share icon and choose Open in Safari first.
+    </div>
+  </div>
 </div>
 
-<a class="button" href="/enroll/profile.mobileconfig">Download the profile</a>
+<div class="action-dock">
+  <a class="button" href="/enroll/profile.mobileconfig">Download the profile</a>
+  <p class="action-hint">iOS gives you about eight minutes to finish installation.</p>
+</div>
 
-<div class="card">
-  <h3 style="margin-top:0;font-size:.95rem">Then finish in Settings</h3>
+<div class="section-title">
+  <h2>Finish in Settings</h2>
+  <p>Four steps</p>
+</div>
+<section class="section">
   <ol class="steps">
     <li>Tap <strong>Allow</strong> when Safari asks to download a configuration profile.</li>
-    <li>Tap <strong>Close</strong> on &ldquo;Profile Downloaded&rdquo;.</li>
+    <li>Tap <strong>Close</strong> on “Profile Downloaded”.</li>
     <li>Open <strong>Settings &rsaquo; General &rsaquo; VPN &amp; Device Management</strong>.</li>
     <li>Tap the Fledge profile, then <strong>Install</strong>, and enter your passcode.</li>
   </ol>
-  <p style="color:var(--muted);font-size:.86rem;margin:.8rem 0 0">iOS discards the download if you wait more than about eight minutes, so do it now rather than later.</p>
-</div>
+  <p class="lede">iOS discards the download if you wait more than about eight minutes, so finish the Settings steps now.</p>
+</section>
 
-<a class="button secondary" href="/">Back</a>
+<a class="button secondary back" href="/">Back to published apps</a>
 {{end}}

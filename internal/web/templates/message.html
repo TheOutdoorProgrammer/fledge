@@ -1,15 +1,21 @@
 {{define "title"}}{{.Heading}}{{end}}
 
 {{define "body"}}
-<div class="card">
+<div class="message-page">
+  <div class="message-code">Flight interrupted</div>
   <h1>{{.Heading}}</h1>
-  <p style="color:var(--muted);margin:0">{{.Detail}}</p>
+  <p class="lede">{{.Detail}}</p>
+
+  {{if .Notices}}
+  <div class="notices">
+    {{range .Notices}}
+    <div class="notice {{.Level}}">
+      <div><strong>{{.Title}}</strong>{{.Body}}</div>
+    </div>
+    {{end}}
+  </div>
+  {{end}}
+
+  {{if .BackLink}}<a class="button secondary back" href="{{.BackLink}}">{{.BackLabel}}</a>{{end}}
 </div>
-{{range .Notices}}
-<div class="note {{.Level}}">
-  <strong>{{.Title}}</strong>
-  {{.Body}}
-</div>
-{{end}}
-{{if .BackLink}}<a class="button secondary" href="{{.BackLink}}">{{.BackLabel}}</a>{{end}}
 {{end}}

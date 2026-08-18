@@ -145,6 +145,21 @@ func TestEveryPageRenders(t *testing.T) {
 	}
 }
 
+func TestInstallPagePreservesTheITMSServicesURL(t *testing.T) {
+	server := newTestServer(t)
+	buildID := upload(t, server)
+
+	page := get(t, server, "/a/dev.example.demo")
+	body := page.Body.String()
+	want := "itms-services://?action=download-manifest&amp;url=https://fledge.example/a/dev.example.demo/" + buildID + "/manifest.plist"
+	if !strings.Contains(body, want) {
+		t.Errorf("install page does not contain the iOS installer URL %q", want)
+	}
+	if strings.Contains(body, "#ZgotmplZ") {
+		t.Error("install URL was rejected by html/template")
+	}
+}
+
 func TestManifestIsServedAsApplePropertyList(t *testing.T) {
 	server := newTestServer(t)
 	buildID := upload(t, server)
@@ -193,6 +208,23 @@ func TestPackageAndIconAreServable(t *testing.T) {
 	}
 	if icon.Body.Len() == 0 {
 		t.Error("icon body is empty")
+	}
+}
+
+func TestGeneratedWebAssetsAreServable(t *testing.T) {
+	server := newTestServer(t)
+
+	for _, name := range []string{"icon-1024.png", "icon-512.png", "icon-180.png", "favicon-32.png", "favicon-16.png"} {
+		recorder := get(t, server, "/assets/"+name)
+		if recorder.Code != http.StatusOK {
+			t.Errorf("%s = %d, want 200", name, recorder.Code)
+		}
+		if got := recorder.Header().Get("Content-Type"); got != "image/png" {
+			t.Errorf("%s Content-Type = %q, want image/png", name, got)
+		}
+		if recorder.Body.Len() == 0 {
+			t.Errorf("%s body is empty", name)
+		}
 	}
 }
 

@@ -2,6 +2,7 @@
 package httpapi
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -9,9 +10,11 @@ import (
 	"log/slog"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/nerdswhofish/fledge/internal/config"
 	"github.com/nerdswhofish/fledge/internal/store"
+	"github.com/nerdswhofish/fledge/internal/web"
 )
 
 // deviceCookie remembers which device a browser belongs to, so an install page
@@ -45,6 +48,7 @@ func New(cfg *config.Config, st *store.Store, log *slog.Logger) *Server {
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /{$}", s.handleIndex)
+	s.mux.HandleFunc("GET /assets/{asset}", s.handleWebAsset)
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "text/plain")
 		_, _ = w.Write([]byte("ok\n"))
@@ -61,6 +65,19 @@ func (s *Server) routes() {
 	s.mux.Handle("GET /api/apps/{bundle}/builds", s.authenticated(s.handleListBuilds))
 	s.mux.Handle("DELETE /api/apps/{bundle}/builds/{build}", s.authenticated(s.handleDeleteBuild))
 	s.mux.Handle("GET /api/devices", s.authenticated(s.handleListDevices))
+}
+
+func (s *Server) handleWebAsset(w http.ResponseWriter, r *http.Request) {
+	name := r.PathValue("asset")
+	asset, err := web.Asset(name)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	w.Header().Set("Content-Type", "image/png")
+	w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(asset))
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {

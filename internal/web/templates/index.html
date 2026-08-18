@@ -1,42 +1,73 @@
 {{define "title"}}{{.Title}}{{end}}
 
 {{define "body"}}
-{{if .Apps}}
-<p style="color:var(--muted)">Open one of these on the iPhone or iPad you want to install it on. Use Safari.</p>
-{{range .Apps}}
-<div class="card">
-  <a class="stretched" href="/a/{{.BundleID}}">
-    <div class="app-head">
-      <img src="{{.IconURL}}" alt="" width="68" height="68">
-      <div class="meta">
-        <h1 style="font-size:1.15rem">{{.Name}}</h1>
-        <div class="sub">{{.Version}} ({{.Build}}) &middot; {{since .Uploaded}}</div>
-        <div class="badges">
-          <span class="badge info">{{.ProfileType}}</span>
-          {{if .Expired}}<span class="badge bad">expired</span>
-          {{else if .ExpiringSoon}}<span class="badge warn">expiring</span>{{end}}
-          <span class="badge plain">{{.BuildCount}} build{{if ne .BuildCount 1}}s{{end}}</span>
+<header class="page-intro">
+  <div class="eyebrow">Private distribution</div>
+  <h1>Your builds,<br>cleared to fly.</h1>
+  <p class="lede">Open a build on the iPhone or iPad you want to install it on. <strong>Use Safari</strong>; embedded browsers silently lose the handoff to iOS.</p>
+</header>
+
+<div class="index-grid">
+  <div>
+    <div class="section-title">
+      <h2>Published apps</h2>
+      {{if .Apps}}<p>{{len .Apps}} ready</p>{{else}}<p>Hangar empty</p>{{end}}
+    </div>
+    <section class="section">
+      {{if .Apps}}
+      <ul class="app-list">
+        {{range .Apps}}
+        <li>
+          <a class="app-row" href="/a/{{.BundleID}}">
+            <span class="app-row-main">
+              <img class="app-icon" src="{{.IconURL}}" alt="" width="62" height="62">
+              <span class="app-row-copy">
+                <h2>{{.Name}}</h2>
+                <p>{{.Version}} ({{.Build}}) / {{since .Uploaded}}</p>
+                <span class="badges">
+                  {{with .ProfileType}}<span class="badge info">{{.}}</span>{{end}}
+                  {{if .Expired}}<span class="badge bad">expired</span>{{else if .ExpiringSoon}}<span class="badge warn">expiring</span>{{end}}
+                  <span class="badge">{{.BuildCount}} build{{if ne .BuildCount 1}}s{{end}}</span>
+                </span>
+              </span>
+            </span>
+          </a>
+        </li>
+        {{end}}
+      </ul>
+      {{else}}
+      <div class="message-code">No payload</div>
+      <h2>Nothing published yet</h2>
+      <p class="lede">Run <code>fledge release</code> in an app repository, or upload an exported archive with <code>fledge upload build.ipa</code>.</p>
+      {{end}}
+    </section>
+  </div>
+
+  <aside class="index-device">
+    <div class="section-title">
+      <h2>This device</h2>
+      <p>Install check</p>
+    </div>
+    <section class="section">
+      {{if .Device}}
+      <div class="device-line">
+        <span class="device-status known" aria-hidden="true"></span>
+        <div>
+          <h3>Registered as {{.Device.Name}}</h3>
+          <p class="mono app-sub">{{.Device.UDID}}</p>
         </div>
       </div>
-    </div>
-  </a>
-</div>
-{{end}}
-{{else}}
-<div class="card">
-  <h1 style="font-size:1.2rem">Nothing published yet</h1>
-  <p style="color:var(--muted);margin:0">Run <code>fledge release</code> in an app repository, or upload an exported archive with <code>fledge upload build.ipa</code>.</p>
-</div>
-{{end}}
-
-<h2>This device</h2>
-<div class="card">
-  {{if .Device}}
-    <p style="margin:0">Registered as <strong>{{.Device.Name}}</strong>.</p>
-    <p class="mono" style="color:var(--muted);margin:.3rem 0 0;font-size:.82rem">{{.Device.UDID}}</p>
-  {{else}}
-    <p style="margin:0 0 .2rem">Fledge does not know which device this is, so it cannot tell you in advance whether a build will install.</p>
-    <a class="button secondary" href="/enroll">Register this device</a>
-  {{end}}
+      {{else}}
+      <div class="device-line">
+        <span class="device-status" aria-hidden="true"></span>
+        <div>
+          <h3>Unknown device</h3>
+          <p class="app-sub">Fledge cannot tell in advance whether a build is signed for this device.</p>
+        </div>
+      </div>
+      <a class="button secondary" href="/enroll">Register this device</a>
+      {{end}}
+    </section>
+  </aside>
 </div>
 {{end}}

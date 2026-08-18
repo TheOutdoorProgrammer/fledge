@@ -36,3 +36,32 @@ func TestPlaceholderIconIsAValidPNG(t *testing.T) {
 		}
 	}
 }
+
+func TestGeneratedIconAssetsAreValidPNGs(t *testing.T) {
+	sizes := map[string]int{
+		"icon-1024.png":  1024,
+		"icon-512.png":   512,
+		"icon-180.png":   180,
+		"favicon-32.png": 32,
+		"favicon-16.png": 16,
+	}
+
+	for name, size := range sizes {
+		t.Run(name, func(t *testing.T) {
+			raw, err := Asset(name)
+			if err != nil {
+				t.Fatalf("read asset: %v", err)
+			}
+			decoded, err := png.Decode(bytes.NewReader(raw))
+			if err != nil {
+				t.Fatalf("decode: %v", err)
+			}
+			if got := decoded.Bounds().Dx(); got != size {
+				t.Errorf("width = %d, want %d", got, size)
+			}
+			if got := decoded.Bounds().Dy(); got != size {
+				t.Errorf("height = %d, want %d", got, size)
+			}
+		})
+	}
+}

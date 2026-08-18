@@ -1,85 +1,128 @@
 {{define "title"}}{{.Build.App.Name}} {{.Build.App.Version}}{{end}}
 
 {{define "body"}}
-<div class="card">
+<section class="section install-hero">
+  <div class="eyebrow">Build ready</div>
   <div class="app-head">
-    <img src="{{.IconURL}}" alt="" width="68" height="68">
-    <div class="meta">
+    <img class="app-icon" src="{{.IconURL}}" alt="" width="96" height="96">
+    <div class="app-head-copy">
       <h1>{{.Build.App.Name}}</h1>
-      <div class="sub">{{.Build.App.Version}} ({{.Build.App.Build}}) &middot; {{.Build.App.BundleID}}</div>
+      <div class="app-sub">{{.Build.App.Version}} ({{.Build.App.Build}}) / {{.Build.App.BundleID}}</div>
     </div>
   </div>
-
-  <div class="badges">
+  <div class="badges" aria-label="Build status">
+    {{with .Build.App.Profile}}<span class="badge info">{{.Type}}</span>{{end}}
     {{with .Build.App.Profile}}
-      <span class="badge info">{{.Type}}</span>
       {{if $.Expired}}<span class="badge bad">expired</span>
       {{else if $.ExpiringSoon}}<span class="badge warn">expires {{until .Expires}}</span>
       {{else}}<span class="badge ok">expires {{until .Expires}}</span>{{end}}
     {{end}}
-    <span class="badge plain">{{bytes .Build.App.Size}}</span>
-    {{if .IsLatest}}<span class="badge ok">latest</span>{{else}}<span class="badge warn">superseded</span>{{end}}
+    <span class="badge">{{bytes .Build.App.Size}}</span>
+    {{if .IsLatest}}<span class="badge ok">latest build</span>{{else}}<span class="badge warn">superseded</span>{{end}}
   </div>
-</div>
+</section>
 
-{{range .Notices}}
-<div class="note {{.Level}}">
-  <strong>{{.Title}}</strong>
-  {{.Body}}
-</div>
-{{end}}
-
-{{if .Installable}}
-  <a class="button" href="{{.InstallURL}}">Install {{.Build.App.Name}}</a>
-{{else}}
-  <span class="button" aria-disabled="true">Install unavailable</span>
-{{end}}
-
-<div class="card">
-  <h3 style="margin-top:0;font-size:.95rem">After you tap Install</h3>
-  <ol class="steps">
-    <li>Confirm the prompt. The icon appears on your Home Screen and fills in as it downloads.</li>
-    {{if .Build.App.RequiresDeveloperMode}}
-    <li>Open <strong>Settings &rsaquo; Privacy &amp; Security &rsaquo; Developer Mode</strong>, turn it on, and restart. The app will not launch until you do.</li>
+<div class="install-grid">
+  <div class="install-main">
+    {{if .Notices}}
+    <div class="notices" aria-label="Installation checks">
+      {{range .Notices}}
+      <div class="notice {{.Level}}">
+        <div><strong>{{.Title}}</strong>{{.Body}}</div>
+      </div>
+      {{end}}
+    </div>
     {{end}}
-    <li>If iOS says the developer is untrusted, trust it under <strong>Settings &rsaquo; General &rsaquo; VPN &amp; Device Management</strong>.</li>
-  </ol>
-</div>
 
-{{if .QRDataURI}}
-<div class="card">
-  <h3 style="margin-top:0;font-size:.95rem">Install on another device</h3>
-  <p style="color:var(--muted);font-size:.9rem;margin:0">Scan with the Camera app. It opens this page in Safari, which is the only browser the installer reliably works from.</p>
-  <img class="qr" src="{{.QRDataURI}}" alt="QR code linking to this page" width="190" height="190">
-</div>
-{{end}}
+    <div class="action-dock">
+      {{if .Installable}}
+        <a class="button" href="{{.InstallURL}}">Install {{.Build.App.Name}}</a>
+        <p class="action-hint">Safari hands this build to the iOS installer.</p>
+      {{else}}
+        <span class="button" aria-disabled="true">Install unavailable</span>
+        <p class="action-hint">Resolve the blocking check above, then try again.</p>
+      {{end}}
+    </div>
 
-<div class="card">
-  <dl class="facts">
-    <dt>Bundle</dt><dd class="mono">{{.Build.App.BundleID}}</dd>
-    <dt>Build</dt><dd class="mono">{{.Build.ID}}</dd>
-    <dt>Uploaded</dt><dd>{{since .Build.Uploaded}}</dd>
-    {{with .Build.App.MinimumOS}}<dt>Requires</dt><dd>iOS {{.}} or later</dd>{{end}}
-    {{with .Build.App.Profile}}
-      <dt>Team</dt><dd>{{.TeamName}} <span class="mono">({{.TeamID}})</span></dd>
-      <dt>Profile</dt><dd>{{.Name}}</dd>
-      <dt>Devices</dt><dd>{{if .ProvisionsAllDevices}}any device{{else}}{{len .Devices}} registered{{end}}</dd>
+    <div class="section-title">
+      <h2>After you tap Install</h2>
+      <p>Do not skip this</p>
+    </div>
+    <section class="section">
+      <ol class="steps">
+        <li>Confirm the prompt. The icon appears on your Home Screen and fills in as it downloads.</li>
+        {{if .Build.App.RequiresDeveloperMode}}
+        <li>Open <strong>Settings &rsaquo; Privacy &amp; Security &rsaquo; Developer Mode</strong>, turn it on, and restart. The app will not launch until you do.</li>
+        {{end}}
+        <li>If iOS says the developer is untrusted, trust it under <strong>Settings &rsaquo; General &rsaquo; VPN &amp; Device Management</strong>.</li>
+      </ol>
+    </section>
+
+    {{if .QRDataURI}}
+    <div class="section-title">
+      <h2>Another device</h2>
+      <p>Camera to Safari</p>
+    </div>
+    <section class="section qr-wrap">
+      <div>
+        <h3>Send this build across the room</h3>
+        <p class="lede">Scan with the Camera app. It opens this page in Safari, the only browser the installer reliably works from.</p>
+      </div>
+      <img class="qr" src="{{.QRDataURI}}" alt="QR code linking to this build page" width="168" height="168">
+    </section>
     {{end}}
-    {{with .Build.Notes}}<dt>Notes</dt><dd>{{.}}</dd>{{end}}
-  </dl>
-</div>
+  </div>
 
-{{if gt (len .History) 1}}
-<h2>Earlier builds</h2>
-<div class="card">
-  <ul class="rows">
-    {{range .History}}
-    <li><a href="{{$.BasePath}}/{{.ID}}">
-      <span>{{.App.Version}} ({{.App.Build}}){{if eq .ID $.Build.ID}} <span class="current">&larr; showing</span>{{end}}</span>
-      <span class="right">{{since .Uploaded}}<br>{{bytes .App.Size}}</span>
-    </a></li>
+  <aside class="install-side">
+    <div class="section-title">
+      <h2>Flight record</h2>
+      <p>Build metadata</p>
+    </div>
+    <section class="section">
+      <dl class="facts">
+        <dt>Bundle</dt><dd class="mono">{{.Build.App.BundleID}}</dd>
+        <dt>Build ID</dt><dd class="mono">{{.Build.ID}}</dd>
+        <dt>Uploaded</dt><dd>{{since .Build.Uploaded}}</dd>
+        <dt>Package</dt><dd>{{bytes .Build.App.Size}}</dd>
+        {{with .Build.App.MinimumOS}}<dt>Requires</dt><dd>iOS {{.}} or later</dd>{{end}}
+        {{if .Build.App.Platforms}}
+        <dt>Platforms</dt>
+        <dd class="platforms">{{range .Build.App.Platforms}}<span class="platform mono">{{.}}</span>{{end}}</dd>
+        {{end}}
+        {{with .Build.App.Profile}}
+          <dt>Team</dt><dd>{{.TeamName}} <span class="mono">{{.TeamID}}</span></dd>
+          <dt>Profile</dt><dd>{{.Name}}</dd>
+          <dt>Profile ID</dt><dd class="mono">{{.UUID}}</dd>
+          <dt>Created</dt><dd>{{since .Created}}</dd>
+          <dt>Expires</dt><dd>{{until .Expires}}</dd>
+          <dt>Devices</dt><dd>{{if .ProvisionsAllDevices}}any device{{else}}{{len .Devices}} registered{{end}}</dd>
+        {{end}}
+        <dt>SHA-256</dt><dd class="mono" title="{{.Build.App.SHA256}}">{{shortSHA .Build.App.SHA256}}</dd>
+        {{with .Build.Notes}}<dt class="full">Release notes</dt><dd class="full">{{.}}</dd>{{end}}
+      </dl>
+    </section>
+
+    {{if gt (len .History) 1}}
+    <div class="section-title">
+      <h2>Build history</h2>
+      <p>{{len .History}} total</p>
+    </div>
+    <section class="section">
+      <ul class="build-list">
+        {{range .History}}
+        <li>
+          <a class="build-row" href="{{$.BasePath}}/{{.ID}}">
+            <span class="build-row-main">
+              <strong>{{.App.Version}} ({{.App.Build}})</strong>
+              {{if eq .ID $.Build.ID}}<br><span class="current">showing now</span>{{end}}
+            </span>
+            <span class="build-row-side">{{since .Uploaded}}<br>{{bytes .App.Size}}</span>
+          </a>
+        </li>
+        {{end}}
+      </ul>
+    </section>
     {{end}}
-  </ul>
+  </aside>
 </div>
-{{end}}
 {{end}}

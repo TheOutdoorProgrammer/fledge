@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"path"
 	"strings"
 	"time"
 )
 
-//go:embed templates/*.html
+//go:generate go run ./assets/generate -out ./assets
+//go:embed templates/*.html assets/*.png
 var templateFS embed.FS
 
 // pages holds one fully parsed template set per page. They cannot share a set:
@@ -58,6 +60,15 @@ func Render(w http.ResponseWriter, status int, name string, data any) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(status)
 	_, _ = w.Write(buf.Bytes())
+}
+
+// Asset returns one generated browser asset without exposing the embedded
+// filesystem outside this package.
+func Asset(name string) ([]byte, error) {
+	if name == "" || path.Base(name) != name {
+		return nil, fmt.Errorf("web: invalid asset name %q", name)
+	}
+	return templateFS.ReadFile("assets/" + name)
 }
 
 func helpers() template.FuncMap {
