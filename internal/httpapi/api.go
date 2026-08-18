@@ -21,6 +21,27 @@ type uploadResponse struct {
 	Devices    int    `json:"devices"`
 	InstallURL string `json:"install_url"`
 	PageURL    string `json:"page_url"`
+	Pruned     int    `json:"pruned,omitempty"`
+}
+
+// prune trims an app's history to the configured depth. A failure here is
+// logged rather than returned: the build was published, and reporting the
+// upload as failed would invite a retry that publishes it twice.
+func (s *Server) prune(bundleID string) int {
+	if s.cfg.KeepBuilds <= 0 {
+		return 0
+	}
+
+	removed, err := s.store.Prune(bundleID, s.cfg.KeepBuilds)
+	if err != nil {
+		s.log.Error("could not prune old builds", "bundle", bundleID, "error", err)
+		return 0
+	}
+	if removed > 0 {
+		s.log.Info("pruned old builds", "bundle", bundleID, "removed", removed, "kept", s.cfg.KeepBuilds)
+	}
+
+	return removed
 }
 
 // handleUpload accepts an exported archive. The body is the archive itself
@@ -77,7 +98,9 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 
 	s.log.Info("published build",
 		"bundle", build.App.BundleID, "version", build.App.Version,
-		"build", build.App.Build, "id", build.ID)
+		"build", build.App.Build, "id", build.ID, "publisher", describePublisher(r))
+
+	response.Pruned = s.prune(build.App.BundleID)
 
 	writeJSON(w, http.StatusCreated, response)
 }

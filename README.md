@@ -337,6 +337,7 @@ It suits a server with one operator and is deliberately not the default.
 | `FLEDGE_DATA_DIR` | | `/var/lib/fledge` | Where builds are kept |
 | `FLEDGE_TITLE` | | `Fledge` | Shown in the header |
 | `FLEDGE_MAX_UPLOAD` | | 1 GiB | Bytes |
+| `FLEDGE_KEEP_BUILDS` | | `5` | Builds kept per app. Older ones are removed as each new build lands. `0` keeps everything |
 | `FLEDGE_ENROLL_TOKEN` | | | A standing invitation that never expires. Invitations are the usual way |
 | `FLEDGE_ENROLL_SIGNING_CERT`, `FLEDGE_ENROLL_SIGNING_KEY` | | | PEM, or `_FILE` variants. Without them iOS labels the profile "Not Signed" |
 | `FLEDGE_ASC_ISSUER_ID`, `FLEDGE_ASC_KEY_ID`, `FLEDGE_ASC_PRIVATE_KEY` | | | App Store Connect API key, `_FILE` variant supported. **The key must hold the Admin role**: an Ad Hoc profile is a distribution profile, which the Developer role cannot create |
@@ -365,6 +366,11 @@ Builds live on a filesystem, one directory per build, with a JSON sidecar beside
 
 A build is named by the first twelve hex digits of its archive's SHA-256, so uploading the same archive twice is idempotent.
 The directory is readable without Fledge running, which is the point.
+
+History is trimmed as each build lands, keeping the newest `FLEDGE_KEEP_BUILDS` (five by default, `0` for everything).
+Archives are tens of megabytes and nobody installs the ninth most recent build, so the default keeps a volume from filling on its own.
+The upload response reports how many were removed, so a release log says a build fell off the end rather than it happening quietly.
+`fledge delete -keep N` does the same on demand.
 
 ## API
 

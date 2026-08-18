@@ -18,6 +18,9 @@ const (
 	DefaultTitle      = "Fledge"
 	DefaultMaxUpload  = 1 << 30
 	DefaultOIDCIssuer = "https://token.actions.githubusercontent.com"
+	// DefaultKeepBuilds bounds history per app. Archives are tens of megabytes
+	// and nobody installs the ninth most recent build.
+	DefaultKeepBuilds = 5
 )
 
 // Config is the server's runtime configuration.
@@ -28,6 +31,7 @@ type Config struct {
 	UploadToken string
 	Title       string
 	MaxUpload   int64
+	KeepBuilds  int
 	Apple       Apple
 	Enroll      Enroll
 	Workloads   Workloads
@@ -90,6 +94,17 @@ func Load() (*Config, error) {
 		UploadToken: os.Getenv("FLEDGE_UPLOAD_TOKEN"),
 		Title:       envOr("FLEDGE_TITLE", DefaultTitle),
 		MaxUpload:   DefaultMaxUpload,
+		KeepBuilds:  DefaultKeepBuilds,
+	}
+
+	// Zero means keep everything, so this parses rather than treating an unset
+	// and an explicit nothing the same way.
+	if raw := os.Getenv("FLEDGE_KEEP_BUILDS"); raw != "" {
+		keep, err := strconv.Atoi(raw)
+		if err != nil || keep < 0 {
+			return nil, fmt.Errorf("config: FLEDGE_KEEP_BUILDS must be zero or more, got %q", raw)
+		}
+		cfg.KeepBuilds = keep
 	}
 
 	if raw := os.Getenv("FLEDGE_MAX_UPLOAD"); raw != "" {

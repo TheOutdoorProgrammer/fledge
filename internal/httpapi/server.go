@@ -135,6 +135,14 @@ func publisherFrom(r *http.Request) (publisher, bool) {
 	return who, ok
 }
 
+// describePublisher names the caller for a log line.
+func describePublisher(r *http.Request) string {
+	if who, ok := publisherFrom(r); ok {
+		return who.Describe()
+	}
+	return "unauthenticated"
+}
+
 // authenticated accepts either the shared upload token or a CI workload
 // identity token. Install routes stay open because iOS sends no credentials.
 func (s *Server) authenticated(next http.HandlerFunc) http.Handler {

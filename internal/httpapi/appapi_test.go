@@ -15,6 +15,18 @@ import (
 func uploadVersion(t *testing.T, server *Server, version, build, notes string) {
 	t.Helper()
 
+	recorder := httptest.NewRecorder()
+	server.ServeHTTP(recorder, uploadRequest(t, version, build, notes))
+
+	if recorder.Code != http.StatusCreated {
+		t.Fatalf("upload %s = %d: %s", version, recorder.Code, recorder.Body)
+	}
+}
+
+// uploadRequest builds the publish request for a synthetic archive.
+func uploadRequest(t *testing.T, version, build, notes string) *http.Request {
+	t.Helper()
+
 	var buf bytes.Buffer
 	archive := zip.NewWriter(&buf)
 	writer, err := archive.Create("Payload/Demo.app/Info.plist")
@@ -40,12 +52,8 @@ func uploadVersion(t *testing.T, server *Server, version, build, notes string) {
 	target := "/api/builds?notes=" + url.QueryEscape(notes)
 	request := httptest.NewRequest(http.MethodPost, target, bytes.NewReader(buf.Bytes()))
 	request.Header.Set("Authorization", "Bearer "+testToken)
-	recorder := httptest.NewRecorder()
-	server.ServeHTTP(recorder, request)
 
-	if recorder.Code != http.StatusCreated {
-		t.Fatalf("upload %s = %d: %s", version, recorder.Code, recorder.Body)
-	}
+	return request
 }
 
 func latest(t *testing.T, server *Server, query string) latestResponse {
