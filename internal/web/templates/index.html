@@ -57,6 +57,19 @@
           <p class="mono app-sub">{{.Device.UDID}}</p>
         </div>
       </div>
+      {{if .Device.Misnamed}}
+      <div class="notice warn rename">
+        <div>
+          <strong>Apple calls this device {{.Device.AppleName}}</strong>
+          Only the label in your developer account differs. Nothing is broken, but it makes the device list hard to read.
+          <form method="post" action="/enroll/rename" class="rename-form">
+            <label class="visually-hidden" for="device-name">New name</label>
+            <input id="device-name" name="name" value="{{.Device.Name}}" maxlength="128" autocomplete="off" spellcheck="false">
+            <button type="submit">Rename at Apple</button>
+          </form>
+        </div>
+      </div>
+      {{end}}
       {{else}}
       <div class="device-line">
         <span class="device-status" aria-hidden="true"></span>

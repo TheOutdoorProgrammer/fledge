@@ -242,6 +242,74 @@ func TestCallbackRejectsAMismatchedChallenge(t *testing.T) {
 	}
 }
 
+// TestIndexOffersToFixAMisnamedDevice covers the case that matters in practice:
+// a device registered years ago by another tool keeps that tool's label, and
+// fixing it should not require enrolling again.
+func TestIndexOffersToFixAMisnamedDevice(t *testing.T) {
+	server := newTestServer(t)
+	device := &store.Device{
+		UDID:       "00008140-DDDD",
+		Name:       "Joey's iPhone",
+		Registered: true,
+		AppleID:    "ABC123",
+		AppleName:  "iOS Device (added by Expo)",
+	}
+	if err := server.store.PutDevice(device); err != nil {
+		t.Fatalf("put device: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	server.setDeviceCookie(recorder, device.UDID)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, cookie := range recorder.Result().Cookies() {
+		request.AddCookie(cookie)
+	}
+
+	page := httptest.NewRecorder()
+	server.ServeHTTP(page, request)
+	body := page.Body.String()
+
+	if !strings.Contains(body, "iOS Device (added by Expo)") {
+		t.Error("the index does not mention the name Apple has")
+	}
+	if !strings.Contains(body, `action="/enroll/rename"`) {
+		t.Error("the index offers no way to fix the name")
+	}
+	if !strings.Contains(body, `value="Joey&#39;s iPhone"`) {
+		t.Error("the rename field is not prefilled with the device's own name")
+	}
+}
+
+func TestIndexStaysQuietWhenTheNameMatches(t *testing.T) {
+	server := newTestServer(t)
+	device := &store.Device{
+		UDID:       "00008140-EEEE",
+		Name:       "Joey's iPhone",
+		Registered: true,
+		AppleID:    "ABC124",
+		AppleName:  "Joey's iPhone",
+	}
+	if err := server.store.PutDevice(device); err != nil {
+		t.Fatalf("put device: %v", err)
+	}
+
+	recorder := httptest.NewRecorder()
+	server.setDeviceCookie(recorder, device.UDID)
+
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	for _, cookie := range recorder.Result().Cookies() {
+		request.AddCookie(cookie)
+	}
+
+	page := httptest.NewRecorder()
+	server.ServeHTTP(page, request)
+
+	if strings.Contains(page.Body.String(), `action="/enroll/rename"`) {
+		t.Error("the index offers a rename for a device that is named correctly")
+	}
+}
+
 func TestInstallPageWarnsWhenTheDeviceIsNotInTheProfile(t *testing.T) {
 	server := newTestServer(t)
 	buildID := upload(t, server)

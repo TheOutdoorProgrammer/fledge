@@ -168,6 +168,41 @@ main { width: min(calc(100% - 2rem), var(--page)); margin: 0 auto; }
 
 .notice::before { color: var(--muted); font: 800 .72rem/1.8 ui-monospace, "SF Mono", monospace; letter-spacing: .06em; content: "INFO"; }
 .notice strong { display: block; margin-bottom: .15rem; color: var(--fg); }
+.notice.rename { margin-top: .8rem; }
+.rename-form { display: flex; flex-wrap: wrap; gap: .5rem; margin: .7rem 0 0; }
+.rename-form input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  min-height: 42px;
+  padding: .4rem .7rem;
+  border: 1px solid var(--line);
+  border-radius: 3px 10px 3px 3px;
+  background: rgba(18, 19, 25, .85);
+  color: var(--fg);
+  font: 600 .9rem/1 inherit;
+}
+.rename-form input:focus-visible { border-color: var(--cyan); }
+.rename-form button {
+  min-height: 42px;
+  padding: .4rem 1rem;
+  border: 1px solid var(--orange);
+  border-radius: 3px 10px 3px 3px;
+  background: transparent;
+  color: var(--orange);
+  font: 800 .82rem/1 inherit;
+  cursor: pointer;
+}
+.rename-form button:hover { color: var(--surface); background: var(--orange); }
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .notice-action { margin: .6rem 0 0; }
 .notice-action button {
   min-height: 40px;

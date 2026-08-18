@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"io"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/theoutdoorprogrammer/fledge/internal/asc"
@@ -337,10 +338,20 @@ func (s *Server) handleEnrollRename(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// The form may carry a name; without one this falls back to what the device
+	// called itself, which is all iOS 26 gives when DEVICE_NAME comes back empty.
+	name := strings.TrimSpace(r.FormValue("name"))
+	if name == "" {
+		name = device.Name
+	}
+	if len(name) > 128 {
+		name = name[:128]
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 
-	renamed, err := s.apple.RenameDevice(ctx, device.AppleID, device.Name)
+	renamed, err := s.apple.RenameDevice(ctx, device.AppleID, name)
 	if err != nil {
 		s.log.Error("apple rename failed", "udid", device.UDID, "error", err)
 		web.Render(w, http.StatusBadGateway, "message", map[string]any{
