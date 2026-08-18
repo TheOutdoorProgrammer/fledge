@@ -24,6 +24,21 @@ graph TD
 Fledge splits along that line on purpose: the CLI archives, exports and uploads, and the server only ever receives a finished archive.
 No signing certificate, private key, or Apple credential is needed by the server to distribute a build, which is what keeps the thing you expose on your network boring.
 
+## Who may do what
+
+| Surface | |
+| --- | --- |
+| Browsing, install pages, manifests, packages, version check | **open** |
+| Registering a device | **an invitation** |
+| Publishing, deleting, minting invitations | **a token** |
+
+The open surfaces are open because they have to be: the iOS installer fetches the manifest and the package itself, with no cookie and no way to sign in, and an app checking its own version would have to ship a credential inside the binary.
+
+An ad hoc archive only runs on devices named in its provisioning profile, so a stranger who downloads one cannot run it.
+What registration protects is different and irreversible: it spends one of a hundred annual Apple device slots that never come back.
+
+[ADR 0006](adr/0006-public-downloads-invited-registration.md) has the reasoning, including what exposure this accepts.
+
 ## Requirements
 
 - An Apple Developer Program membership. The Enterprise Program is not needed and does not help.
@@ -76,11 +91,30 @@ If Xcode already produced an archive, skip straight to publishing:
 fledge upload -notes "fixes the crash on launch" build.ipa
 ```
 
-And to see what Fledge reads out of an archive without uploading anything:
+And to see what Fledge reads out of an archive without uploading anything, which is the fastest way to answer "why will this not install":
 
 ```console
 fledge inspect build.ipa
 ```
+
+## Everything else the CLI does
+
+```console
+fledge apps                        # what is published
+fledge builds <bundle-id>          # history for one app
+fledge devices                     # what has enrolled here
+fledge apple                       # Apple device slots and registered devices
+
+fledge delete <bundle-id> <build>  # remove one build
+fledge delete -all <bundle-id>     # remove every build; the app leaves the index
+fledge delete -keep 3 <bundle-id>  # prune, keeping the newest three
+```
+
+`delete` shows what it will remove and asks first; `-y` skips that.
+Naming neither a build nor `-all` nor `-keep` is an error rather than a guess, because the guess would be destructive.
+Flags go before the bundle identifier.
+
+`fledge apple` is the one to run before inviting anyone: it prints how much of the annual device allowance is left.
 
 ```text
 name      Haystack
@@ -303,9 +337,12 @@ It suits a server with one operator and is deliberately not the default.
 | `FLEDGE_DATA_DIR` | | `/var/lib/fledge` | Where builds are kept |
 | `FLEDGE_TITLE` | | `Fledge` | Shown in the header |
 | `FLEDGE_MAX_UPLOAD` | | 1 GiB | Bytes |
-| `FLEDGE_ENROLL_TOKEN` | | | Setting it switches device registration on |
+| `FLEDGE_ENROLL_TOKEN` | | | A standing invitation that never expires. Invitations are the usual way |
 | `FLEDGE_ENROLL_SIGNING_CERT`, `FLEDGE_ENROLL_SIGNING_KEY` | | | PEM, or `_FILE` variants. Without them iOS labels the profile "Not Signed" |
 | `FLEDGE_ASC_ISSUER_ID`, `FLEDGE_ASC_KEY_ID`, `FLEDGE_ASC_PRIVATE_KEY` | | | App Store Connect API key, `_FILE` variant supported. **The key must hold the Admin role**: an Ad Hoc profile is a distribution profile, which the Developer role cannot create |
+| `FLEDGE_OIDC_POLICY` | | | Which repositories may publish what. Setting it enables CI publishing. `_FILE` supported |
+| `FLEDGE_OIDC_AUDIENCE` | | `FLEDGE_PUBLIC_URL` | What stops a token minted for another service being replayed here |
+| `FLEDGE_OIDC_ISSUER` | | GitHub Actions | For another CI provider that issues OIDC tokens |
 
 ## What the install page tells you
 
@@ -323,6 +360,7 @@ Builds live on a filesystem, one directory per build, with a JSON sidecar beside
 ```text
 <data-dir>/apps/<bundle-id>/builds/<build-id>/{app.ipa,build.json,icon.png}
 <data-dir>/devices/<udid>.json
+<data-dir>/invites/<id>.json
 ```
 
 A build is named by the first twelve hex digits of its archive's SHA-256, so uploading the same archive twice is idempotent.
@@ -330,16 +368,47 @@ The directory is readable without Fledge running, which is the point.
 
 ## API
 
-Everything under `/api` needs `Authorization: Bearer <FLEDGE_UPLOAD_TOKEN>`.
-The install routes are deliberately open, because iOS fetches the manifest and the package from its own installer and sends no credentials.
+### Open
+
+No credential, because the callers cannot present one. iOS fetches the manifest and package from its own installer, and an app checking its version would have to ship a secret inside the binary.
 
 | | |
 | --- | --- |
-| `POST /api/builds` | Publish an archive. The body is the archive; `X-Fledge-Notes` sets the note |
+| `GET /a/{bundle}` | Install page for the newest build |
+| `GET /a/{bundle}/{build}` | Install page for one build |
+| `GET /a/{bundle}/{build}/manifest.plist` | The OTA manifest iOS installs from |
+| `GET /a/{bundle}/{build}/app.ipa` | The archive, range capable |
+| `GET /api/v1/apps/{bundle}/latest?build=N` | Newest build plus every release since `N` |
+| `GET /healthz` | |
+
+### Authenticated
+
+`Authorization: Bearer <token>`, where the token is either `FLEDGE_UPLOAD_TOKEN` or a GitHub workload identity token.
+A workload token may only publish what its policy names; the shared token is unrestricted.
+
+| | |
+| --- | --- |
+| `POST /api/builds?notes=…` | Publish an archive. The body is the archive; `notes` is URL-encoded markdown |
 | `GET /api/apps` | Published apps with their newest build |
 | `GET /api/apps/{bundle}/builds` | One app's builds |
 | `DELETE /api/apps/{bundle}/builds/{build}` | Remove a build |
 | `GET /api/devices` | Enrolled devices |
+| `POST /api/invites` | Mint an invitation. Body `{"note":"…","expires":"168h"}` |
+| `GET /api/invites` | Every invitation and its state |
+| `DELETE /api/invites/{id}` | Revoke an unused invitation |
+
+Notes travel in the query rather than a header because a changelog is multi-line and header values cannot carry newlines.
+`X-Fledge-Notes` still works for a single line.
+
+### Invitation gated
+
+| | |
+| --- | --- |
+| `GET /enroll?t={invite}` | Registration page |
+| `GET /enroll/profile.mobileconfig` | The signed Profile Service payload |
+| `POST /enroll/callback` | Where the device posts its identity. iOS calls this, not you |
+| `GET /enroll/done` | Completion, and where the browser is bound to the device |
+| `POST /enroll/rename` | Rename the device in your Apple account. Authorised by the device cookie |
 
 ## Decisions
 

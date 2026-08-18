@@ -26,6 +26,7 @@ Usage:
   fledge invite create          Mint a link that registers one device
   fledge invite list            Show every invitation and what became of it
   fledge invite revoke <id>     Close an unused invitation
+  fledge delete <bundle-id>     Remove builds: one, -all, or -keep N
   fledge version
 
 The server and token come from FLEDGE_URL and FLEDGE_TOKEN, or from -server and
@@ -69,6 +70,8 @@ func dispatch(ctx context.Context, args []string) error {
 		return appleCommand(ctx, rest)
 	case "invite":
 		return inviteCommand(ctx, rest)
+	case "delete", "rm":
+		return deleteCommand(ctx, rest)
 	case "version":
 		fmt.Println("fledge", version.String())
 		return nil

@@ -1,6 +1,6 @@
 # Device registration is off by default
 
-* Status: accepted
+* Status: superseded by [ADR 0006](0006-public-downloads-invited-registration.md)
 * Date: 2026-08-18
 
 ## Context and problem statement
