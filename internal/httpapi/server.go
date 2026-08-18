@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/nerdswhofish/fledge/internal/asc"
 	"github.com/nerdswhofish/fledge/internal/config"
+	"github.com/nerdswhofish/fledge/internal/enroll"
 	"github.com/nerdswhofish/fledge/internal/store"
 	"github.com/nerdswhofish/fledge/internal/web"
 )
@@ -28,10 +30,13 @@ type Server struct {
 	log       *slog.Logger
 	mux       *http.ServeMux
 	cookieKey []byte
+	sessions  *enroll.Sessions
+	apple     *asc.Client
 }
 
-// New builds a server ready to serve.
-func New(cfg *config.Config, st *store.Store, log *slog.Logger) *Server {
+// New builds a server ready to serve. A nil Apple client is normal: without
+// credentials Fledge still enrols devices, it just cannot register them.
+func New(cfg *config.Config, st *store.Store, apple *asc.Client, log *slog.Logger) *Server {
 	key := sha256.Sum256([]byte("fledge-device-cookie\x00" + cfg.UploadToken))
 
 	s := &Server{
@@ -40,6 +45,8 @@ func New(cfg *config.Config, st *store.Store, log *slog.Logger) *Server {
 		log:       log,
 		mux:       http.NewServeMux(),
 		cookieKey: key[:],
+		sessions:  enroll.NewSessions(),
+		apple:     apple,
 	}
 	s.routes()
 
@@ -65,6 +72,8 @@ func (s *Server) routes() {
 	s.mux.Handle("GET /api/apps/{bundle}/builds", s.authenticated(s.handleListBuilds))
 	s.mux.Handle("DELETE /api/apps/{bundle}/builds/{build}", s.authenticated(s.handleDeleteBuild))
 	s.mux.Handle("GET /api/devices", s.authenticated(s.handleListDevices))
+
+	s.enrollRoutes()
 }
 
 func (s *Server) handleWebAsset(w http.ResponseWriter, r *http.Request) {

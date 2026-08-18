@@ -28,6 +28,27 @@ type Config struct {
 	Title       string
 	MaxUpload   int64
 	Apple       Apple
+	Enroll      Enroll
+}
+
+// Enroll configures device registration. It stays off until a token is set,
+// because registering a device spends one of a hundred annual Apple slots that
+// removing it does not give back.
+type Enroll struct {
+	Token       string
+	SigningCert []byte
+	SigningKey  []byte
+}
+
+// Enabled reports whether device registration is switched on at all.
+func (e Enroll) Enabled() bool {
+	return e.Token != ""
+}
+
+// CanSign reports whether the configuration profile will be signed. Without a
+// certificate iOS installs it anyway but labels it as unverified.
+func (e Enroll) CanSign() bool {
+	return len(e.SigningCert) > 0 && len(e.SigningKey) > 0
 }
 
 // Apple holds App Store Connect API credentials. All three fields are required
@@ -67,8 +88,47 @@ func Load() (*Config, error) {
 	if err := cfg.loadApple(); err != nil {
 		return nil, err
 	}
+	if err := cfg.loadEnroll(); err != nil {
+		return nil, err
+	}
 
 	return cfg, cfg.validate()
+}
+
+func (c *Config) loadEnroll() error {
+	c.Enroll.Token = os.Getenv("FLEDGE_ENROLL_TOKEN")
+
+	cert, err := readPEM("FLEDGE_ENROLL_SIGNING_CERT")
+	if err != nil {
+		return err
+	}
+	key, err := readPEM("FLEDGE_ENROLL_SIGNING_KEY")
+	if err != nil {
+		return err
+	}
+
+	if (cert == nil) != (key == nil) {
+		return errors.New("config: the enrolment signing certificate and key must be set together")
+	}
+	c.Enroll.SigningCert, c.Enroll.SigningKey = cert, key
+
+	return nil
+}
+
+// readPEM prefers the file named by KEY_FILE, falling back to KEY itself.
+func readPEM(key string) ([]byte, error) {
+	if path := os.Getenv(key + "_FILE"); path != "" {
+		value, err := os.ReadFile(path)
+		if err != nil {
+			return nil, fmt.Errorf("config: read %s_FILE: %w", key, err)
+		}
+		return value, nil
+	}
+	if value := os.Getenv(key); value != "" {
+		return []byte(value), nil
+	}
+
+	return nil, nil
 }
 
 func (c *Config) loadApple() error {

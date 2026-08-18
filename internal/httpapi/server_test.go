@@ -61,7 +61,7 @@ func newTestServer(t *testing.T) *Server {
 		MaxUpload:   config.DefaultMaxUpload,
 	}
 
-	return New(cfg, st, slog.New(slog.DiscardHandler))
+	return New(cfg, st, nil, slog.New(slog.DiscardHandler))
 }
 
 func upload(t *testing.T, server *Server) string {

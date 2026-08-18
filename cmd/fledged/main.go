@@ -11,6 +11,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/nerdswhofish/fledge/internal/asc"
 	"github.com/nerdswhofish/fledge/internal/config"
 	"github.com/nerdswhofish/fledge/internal/httpapi"
 	"github.com/nerdswhofish/fledge/internal/store"
@@ -37,9 +38,17 @@ func run(log *slog.Logger) error {
 		return err
 	}
 
+	var apple *asc.Client
+	if cfg.Apple.Enabled() {
+		apple, err = asc.New(cfg.Apple.IssuerID, cfg.Apple.KeyID, cfg.Apple.PrivateKey)
+		if err != nil {
+			return err
+		}
+	}
+
 	server := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(cfg, st, log),
+		Handler:           httpapi.New(cfg, st, apple, log),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Uploads are whole application archives over a home network, so the
 		// write timeout has to tolerate a slow client rather than a slow handler.
