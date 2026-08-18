@@ -1,0 +1,131 @@
+# A worked example: replace fledge.example, and create the secret out of band.
+# TLS must be publicly trusted, because iOS silently refuses a certificate it
+# cannot validate.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fledge
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: fledge-data
+  namespace: fledge
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 20Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fledge
+  namespace: fledge
+spec:
+  # One replica, because builds live on a ReadWriteOnce volume.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: fledge
+  template:
+    metadata:
+      labels:
+        app: fledge
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        fsGroup: 65532
+      containers:
+        - name: fledged
+          image: ghcr.io/nerdswhofish/fledge:latest
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: FLEDGE_PUBLIC_URL
+              value: https://fledge.example
+            - name: FLEDGE_DATA_DIR
+              value: /var/lib/fledge
+            - name: FLEDGE_UPLOAD_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fledge
+                  key: upload-token
+            # Leave this out to keep device registration switched off. See
+            # adr/0004: a registered device permanently spends one of a hundred
+            # annual Apple slots.
+            - name: FLEDGE_ENROLL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: fledge
+                  key: enroll-token
+                  optional: true
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/fledge
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 256Mi
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: fledge-data
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fledge
+  namespace: fledge
+spec:
+  selector:
+    app: fledge
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: fledge
+  namespace: fledge
+  annotations:
+    # Application archives are tens of megabytes, so whatever proxy sits in
+    # front has to be told to allow them.
+    nginx.ingress.kubernetes.io/proxy-body-size: "1024m"
+spec:
+  rules:
+    - host: fledge.example
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: fledge
+                port:
+                  name: http
+  tls:
+    - hosts: [fledge.example]
+      secretName: fledge-tls
