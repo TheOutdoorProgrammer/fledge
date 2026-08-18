@@ -1,0 +1,71 @@
+name: Publish to Fledge
+description: Publish a signed iOS archive to a Fledge server and get back an install link.
+author: TheOutdoorProgrammer
+
+branding:
+  icon: upload-cloud
+  color: purple
+
+inputs:
+  server:
+    description: Base URL of the Fledge server, for example https://fledge.example.
+    required: true
+  token:
+    description: Fledge upload token. Pass a secret, never a literal.
+    required: true
+  ipa:
+    description: Path to the exported .ipa. Globs are allowed when they match exactly one file.
+    required: true
+  notes:
+    description: A line shown on the install page. Defaults to the commit subject.
+    required: false
+    default: ""
+  fail-on-development-signing:
+    description: Fail when the archive is development signed, which forces testers to enable Developer Mode.
+    required: false
+    default: "false"
+  summary:
+    description: Write the install link to the workflow run summary.
+    required: false
+    default: "true"
+
+outputs:
+  install-url:
+    description: The itms-services manifest URL iOS installs from.
+    value: ${{ steps.publish.outputs.install-url }}
+  page-url:
+    description: The install page to open on a device.
+    value: ${{ steps.publish.outputs.page-url }}
+  build-id:
+    description: Fledge's identifier for this build.
+    value: ${{ steps.publish.outputs.build-id }}
+  version:
+    description: CFBundleShortVersionString read out of the archive.
+    value: ${{ steps.publish.outputs.version }}
+  build:
+    description: CFBundleVersion read out of the archive.
+    value: ${{ steps.publish.outputs.build }}
+  bundle-id:
+    description: The application's bundle identifier.
+    value: ${{ steps.publish.outputs.bundle-id }}
+  profile:
+    description: Distribution type of the embedded provisioning profile.
+    value: ${{ steps.publish.outputs.profile }}
+  expires:
+    description: The date the embedded provisioning profile expires.
+    value: ${{ steps.publish.outputs.expires }}
+
+runs:
+  using: composite
+  steps:
+    - id: publish
+      shell: bash
+      env:
+        FLEDGE_SERVER: ${{ inputs.server }}
+        FLEDGE_TOKEN: ${{ inputs.token }}
+        FLEDGE_IPA: ${{ inputs.ipa }}
+        FLEDGE_NOTES: ${{ inputs.notes }}
+        FLEDGE_STRICT: ${{ inputs.fail-on-development-signing }}
+        FLEDGE_SUMMARY: ${{ inputs.summary }}
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+      run: ${{ github.action_path }}/publish.sh
