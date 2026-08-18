@@ -22,6 +22,7 @@ Usage:
   fledge apps                   List published apps
   fledge builds <bundle-id>     List an app's builds
   fledge devices                List enrolled devices
+  fledge apple                  Show Apple device slots and registered devices
   fledge version
 
 The server and token come from FLEDGE_URL and FLEDGE_TOKEN, or from -server and
@@ -61,6 +62,8 @@ func dispatch(ctx context.Context, args []string) error {
 		return buildsCommand(ctx, rest)
 	case "devices":
 		return devicesCommand(ctx, rest)
+	case "apple":
+		return appleCommand(ctx, rest)
 	case "version":
 		fmt.Println("fledge", version.String())
 		return nil
