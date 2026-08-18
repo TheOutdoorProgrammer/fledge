@@ -28,11 +28,6 @@ jobs:
       - name: Test
         run: go test -race -shuffle=on ./...
 
-      - name: Check the icons are the ones the generator produces
-        run: |
-          go generate ./internal/web/...
-          git diff --exit-code -- internal/web/assets
-
       - name: Check formatting
         run: |
           unformatted=$(gofmt -l . )

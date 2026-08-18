@@ -1,4 +1,8 @@
 // Command generate renders Fledge's app icon at every browser-facing size.
+//
+// The committed PNGs are the source of truth, not this program. Run it when the
+// mark changes and commit what it writes; do not expect two architectures to
+// produce identical bytes, because they round the antialiasing differently.
 package main
 
 import (
