@@ -108,10 +108,13 @@ func (d Device) Enabled() bool {
 	return d.Status == "ENABLED"
 }
 
+// deviceAttributes omits every empty field, because Apple rejects an update
+// carrying attributes it considers create-only: sending udid or platform on a
+// PATCH is a 409 even when the value is unchanged.
 type deviceAttributes struct {
-	Name       string `json:"name"`
-	UDID       string `json:"udid"`
-	Platform   string `json:"platform"`
+	Name       string `json:"name,omitempty"`
+	UDID       string `json:"udid,omitempty"`
+	Platform   string `json:"platform,omitempty"`
 	Status     string `json:"status,omitempty"`
 	DeviceType string `json:"deviceClass,omitempty"`
 }
