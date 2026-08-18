@@ -160,11 +160,21 @@ func TestEnrolmentRoundTrip(t *testing.T) {
 	answered := httptest.NewRecorder()
 	server.ServeHTTP(answered, callback)
 
-	if answered.Code != http.StatusFound {
-		t.Fatalf("callback = %d, want a redirect: %s", answered.Code, answered.Body)
+	// 301 specifically, and no Content-Type: iOS reports a 302 here as "Invalid
+	// Profile" even after it has already handed over the attributes.
+	if answered.Code != http.StatusMovedPermanently {
+		t.Fatalf("callback = %d, want 301: %s", answered.Code, answered.Body)
 	}
-	if location := answered.Header().Get("Location"); !strings.Contains(location, "/enroll/done") {
-		t.Errorf("redirect went to %q, want the completion page", location)
+	if got := answered.Header().Get("Content-Type"); got != "" {
+		t.Errorf("Content-Type = %q, want it absent on the redirect", got)
+	}
+	if answered.Body.Len() != 0 {
+		t.Errorf("redirect carried a %d byte body, want none", answered.Body.Len())
+	}
+
+	location := answered.Header().Get("Location")
+	if !strings.HasPrefix(location, "https://fledge.example/enroll/done") {
+		t.Errorf("redirect went to %q, want an absolute same-host completion page", location)
 	}
 
 	stored, err := server.store.Device(udid)

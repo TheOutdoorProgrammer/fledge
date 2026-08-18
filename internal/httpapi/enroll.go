@@ -157,8 +157,9 @@ func (s *Server) handleEnrollProfile(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(document)
 }
 
-// handleEnrollCallback receives the device's answer. Responding with a redirect
-// is what makes iOS reopen Safari on the completion page.
+// handleEnrollCallback takes the device's answer and hands Safari the result.
+// The redirect must be 301, absolute and same-host: a 302 shows on the device
+// as "Invalid Profile" even though the attributes already arrived.
 func (s *Server) handleEnrollCallback(w http.ResponseWriter, r *http.Request) {
 	challenge := r.URL.Query().Get("c")
 	if !s.sessions.Outstanding(challenge) {
@@ -196,7 +197,8 @@ func (s *Server) handleEnrollCallback(w http.ResponseWriter, r *http.Request) {
 	s.sessions.Complete(challenge, device)
 	s.log.Info("device enrolled", "udid", device.UDID, "name", record.Name, "product", device.Product)
 
-	http.Redirect(w, r, s.URLFor("/enroll/done?c="+challenge), http.StatusFound)
+	w.Header().Del("Content-Type")
+	http.Redirect(w, r, s.URLFor("/enroll/done?c="+challenge), http.StatusMovedPermanently)
 }
 
 func (s *Server) handleEnrollDone(w http.ResponseWriter, r *http.Request) {
