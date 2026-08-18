@@ -8,7 +8,6 @@ fail() {
 }
 
 [ -n "${FLEDGE_SERVER:-}" ] || fail "server is required"
-[ -n "${FLEDGE_TOKEN:-}" ] || fail "token is required"
 [ -n "${FLEDGE_IPA:-}" ] || fail "ipa is required"
 
 case "$FLEDGE_SERVER" in
@@ -39,6 +38,28 @@ if [ -z "$notes" ] && [ -n "${COMMIT_MESSAGE:-}" ]; then
   notes="$(printf '%s' "$COMMIT_MESSAGE" | head -n 1)"
 fi
 
+# Without a token, ask GitHub for a workload identity token instead. Nothing
+# long lived is stored anywhere: it is minted per run and expires in minutes.
+credential="${FLEDGE_TOKEN:-}"
+if [ -z "$credential" ]; then
+  if [ -z "${ACTIONS_ID_TOKEN_REQUEST_URL:-}" ] || [ -z "${ACTIONS_ID_TOKEN_REQUEST_TOKEN:-}" ]; then
+    fail "no token was given and this job cannot mint one. Add 'permissions: id-token: write' to the job, or pass a token."
+  fi
+
+  audience="${FLEDGE_AUDIENCE:-$server}"
+  claim="$(
+    curl --silent --show-error --fail \
+      --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+      "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=$(jq -rn --arg a "$audience" '$a|@uri')" \
+      || fail "could not mint a workload identity token"
+  )"
+
+  credential="$(printf '%s' "$claim" | jq -r '.value // empty')"
+  [ -n "$credential" ] || fail "GitHub returned no identity token"
+  echo "::add-mask::${credential}"
+  echo "authenticating as ${GITHUB_REPOSITORY} via workload identity"
+fi
+
 echo "::group::Publishing $(basename "$archive") to ${server}"
 
 body="$(mktemp)"
@@ -49,7 +70,7 @@ status=$(
     --write-out '%{http_code}' \
     --output "$body" \
     --request POST "${server}/api/builds" \
-    --header "Authorization: Bearer ${FLEDGE_TOKEN}" \
+    --header "Authorization: Bearer ${credential}" \
     --header "Content-Type: application/octet-stream" \
     --header "X-Fledge-Notes: ${notes}" \
     --data-binary "@${archive}" \

@@ -14,6 +14,7 @@ import (
 	"github.com/theoutdoorprogrammer/fledge/internal/asc"
 	"github.com/theoutdoorprogrammer/fledge/internal/config"
 	"github.com/theoutdoorprogrammer/fledge/internal/httpapi"
+	"github.com/theoutdoorprogrammer/fledge/internal/oidc"
 	"github.com/theoutdoorprogrammer/fledge/internal/store"
 	"github.com/theoutdoorprogrammer/fledge/internal/version"
 )
@@ -46,9 +47,23 @@ func run(log *slog.Logger) error {
 		}
 	}
 
+	var workloads *oidc.Verifier
+	if cfg.Workloads.Enabled() {
+		policy, err := oidc.ParsePolicy(cfg.Workloads.Policy)
+		if err != nil {
+			return err
+		}
+		workloads, err = oidc.New(context.Background(), cfg.Workloads.Issuer, cfg.Workloads.Audience, policy)
+		if err != nil {
+			return err
+		}
+		log.Info("workload identity publishing enabled",
+			"issuer", cfg.Workloads.Issuer, "audience", cfg.Workloads.Audience, "rules", len(policy))
+	}
+
 	server := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(cfg, st, apple, log),
+		Handler:           httpapi.New(cfg, st, httpapi.Options{Apple: apple, Workloads: workloads}, log),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Uploads are whole application archives over a home network, so the
 		// write timeout has to tolerate a slow client rather than a slow handler.

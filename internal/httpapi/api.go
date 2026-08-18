@@ -42,6 +42,17 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Authorisation waits until here because it is scoped to the bundle
+	// identifier, which is only knowable once the archive has been read.
+	if err := s.mayPublish(r, build.App.BundleID); err != nil {
+		if removeErr := s.store.Delete(build.App.BundleID, build.ID); removeErr != nil {
+			s.log.Error("could not discard an unauthorised upload", "error", removeErr)
+		}
+		s.log.Warn("refused a publish", "bundle", build.App.BundleID, "reason", err)
+		writeJSONError(w, http.StatusForbidden, err.Error())
+		return
+	}
+
 	page := "/a/" + build.App.BundleID + "/" + build.ID
 	response := uploadResponse{
 		BundleID:   build.App.BundleID,
@@ -64,6 +75,21 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		"build", build.App.Build, "id", build.ID)
 
 	writeJSON(w, http.StatusCreated, response)
+}
+
+// mayPublish reports whether the authenticated caller is allowed this bundle.
+// The shared upload token is unrestricted; a workload identity is limited to
+// what its policy names, so one repository cannot overwrite another's app.
+func (s *Server) mayPublish(r *http.Request, bundleID string) error {
+	who, ok := publisherFrom(r)
+	if !ok {
+		return errors.New("the request was not authenticated")
+	}
+	if !who.workload {
+		return nil
+	}
+
+	return s.workloads.Allows(who.identity, bundleID)
 }
 
 func (s *Server) handleListApps(w http.ResponseWriter, _ *http.Request) {

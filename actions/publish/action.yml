@@ -11,8 +11,16 @@ inputs:
     description: Base URL of the Fledge server, for example https://fledge.example.
     required: true
   token:
-    description: Fledge upload token. Pass a secret, never a literal.
-    required: true
+    description: >-
+      Fledge upload token. Leave it empty to authenticate with a GitHub workload
+      identity token instead, which needs `permissions: id-token: write` on the
+      job and no stored secret at all.
+    required: false
+    default: ""
+  audience:
+    description: Audience to mint the identity token for. Defaults to the server URL.
+    required: false
+    default: ""
   ipa:
     description: Path to the exported .ipa. Globs are allowed when they match exactly one file.
     required: true
@@ -63,6 +71,7 @@ runs:
       env:
         FLEDGE_SERVER: ${{ inputs.server }}
         FLEDGE_TOKEN: ${{ inputs.token }}
+        FLEDGE_AUDIENCE: ${{ inputs.audience }}
         FLEDGE_IPA: ${{ inputs.ipa }}
         FLEDGE_NOTES: ${{ inputs.notes }}
         FLEDGE_STRICT: ${{ inputs.fail-on-development-signing }}

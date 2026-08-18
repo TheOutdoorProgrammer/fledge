@@ -3,6 +3,7 @@ package httpapi
 
 import (
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
@@ -15,6 +16,7 @@ import (
 	"github.com/theoutdoorprogrammer/fledge/internal/asc"
 	"github.com/theoutdoorprogrammer/fledge/internal/config"
 	"github.com/theoutdoorprogrammer/fledge/internal/enroll"
+	"github.com/theoutdoorprogrammer/fledge/internal/oidc"
 	"github.com/theoutdoorprogrammer/fledge/internal/store"
 	"github.com/theoutdoorprogrammer/fledge/internal/web"
 )
@@ -32,11 +34,19 @@ type Server struct {
 	cookieKey []byte
 	sessions  *enroll.Sessions
 	apple     *asc.Client
+	workloads *oidc.Verifier
 }
 
-// New builds a server ready to serve. A nil Apple client is normal: without
-// credentials Fledge still enrols devices, it just cannot register them.
-func New(cfg *config.Config, st *store.Store, apple *asc.Client, log *slog.Logger) *Server {
+// Options are the collaborators a server needs. Both clients may be nil:
+// without Apple credentials Fledge still enrols devices but cannot register
+// them, and without a verifier only the shared token can publish.
+type Options struct {
+	Apple     *asc.Client
+	Workloads *oidc.Verifier
+}
+
+// New builds a server ready to serve.
+func New(cfg *config.Config, st *store.Store, opts Options, log *slog.Logger) *Server {
 	key := sha256.Sum256([]byte("fledge-device-cookie\x00" + cfg.UploadToken))
 
 	s := &Server{
@@ -46,7 +56,8 @@ func New(cfg *config.Config, st *store.Store, apple *asc.Client, log *slog.Logge
 		mux:       http.NewServeMux(),
 		cookieKey: key[:],
 		sessions:  enroll.NewSessions(),
-		apple:     apple,
+		apple:     opts.Apple,
+		workloads: opts.Workloads,
 	}
 	s.routes()
 
@@ -93,19 +104,67 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	s.mux.ServeHTTP(w, r)
 }
 
-// authenticated gates the write and inventory endpoints on the upload token.
-// The install routes deliberately stay open: iOS fetches the manifest and the
-// package from its own installer, which sends no credentials of any kind.
+// publisher is who a request proved itself to be. A workload identity is
+// restricted to the bundles its policy names; the shared token is not.
+type publisher struct {
+	identity oidc.Identity
+	workload bool
+}
+
+// Describe names the publisher for a log line or an error.
+func (p publisher) Describe() string {
+	if p.workload {
+		return p.identity.String()
+	}
+	return "upload token"
+}
+
+type publisherKey struct{}
+
+// publisherFrom returns who the request authenticated as.
+func publisherFrom(r *http.Request) (publisher, bool) {
+	who, ok := r.Context().Value(publisherKey{}).(publisher)
+	return who, ok
+}
+
+// authenticated accepts either the shared upload token or a CI workload
+// identity token. Install routes stay open because iOS sends no credentials.
 func (s *Server) authenticated(next http.HandlerFunc) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		presented := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if subtle.ConstantTimeCompare([]byte(presented), []byte(s.cfg.UploadToken)) != 1 {
-			w.Header().Set("WWW-Authenticate", `Bearer realm="fledge"`)
-			writeJSONError(w, http.StatusUnauthorized, "a valid bearer token is required")
+		if presented == "" {
+			s.rejectUnauthenticated(w, "a bearer token is required")
 			return
 		}
-		next(w, r)
+
+		if subtle.ConstantTimeCompare([]byte(presented), []byte(s.cfg.UploadToken)) == 1 {
+			next(w, r.WithContext(context.WithValue(r.Context(), publisherKey{}, publisher{})))
+			return
+		}
+
+		if s.workloads == nil {
+			s.rejectUnauthenticated(w, "the bearer token is not valid")
+			return
+		}
+
+		identity, err := s.workloads.Verify(r.Context(), presented)
+		if err != nil {
+			s.log.Warn("rejected a workload identity token", "error", err)
+			s.rejectUnauthenticated(w, "the workload identity token is not valid")
+			return
+		}
+
+		s.log.Info("authenticated a workload", "repository", identity.Repository,
+			"ref", identity.Ref, "workflow", identity.Workflow, "actor", identity.Actor)
+
+		who := publisher{identity: identity, workload: true}
+		next(w, r.WithContext(context.WithValue(r.Context(), publisherKey{}, who)))
 	})
+}
+
+func (s *Server) rejectUnauthenticated(w http.ResponseWriter, detail string) {
+	w.Header().Set("WWW-Authenticate", `Bearer realm="fledge"`)
+	writeJSONError(w, http.StatusUnauthorized, detail)
 }
 
 // URLFor builds an absolute URL from the configured public origin. Manifest and

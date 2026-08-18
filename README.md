@@ -87,6 +87,53 @@ devices   3 registered
 dev mode  false
 ```
 
+## Publishing from CI
+
+There is a reusable action, and it can authenticate without any stored secret:
+
+```yaml
+jobs:
+  beta:
+    runs-on: macos-15
+    permissions:
+      id-token: write        # lets the runner mint the identity token
+      contents: read
+    steps:
+      # ... build and export the archive ...
+      - uses: TheOutdoorProgrammer/fledge/actions/publish@v1
+        with:
+          server: https://fledge.example
+          ipa: build/*.ipa
+```
+
+With no `token`, the runner asks GitHub for a short-lived OIDC token, Fledge verifies it against GitHub's published keys, and authorises on the `repository` claim.
+Nothing long-lived exists to leak, and there is no secret to rotate.
+
+Enable it by naming which repositories may publish what:
+
+```console
+FLEDGE_OIDC_POLICY='
+  theoutdoorprogrammer/haystack=dev.runcrate.haystack
+  theoutdoorprogrammer/coop@refs/heads/main=zone.stout.coop.watch,zone.stout.coop.parent
+  theoutdoorprogrammer/trusted=*
+'
+```
+
+Entries are separated by newlines or semicolons. Each is `owner/repo=bundle-id`, several bundles comma separated, `*` for any, and an optional `@ref` restricting which branch or tag may publish. Lines starting with `#` are ignored.
+
+**Name the bundles rather than using `*`.** The point of scoping is that a compromised workflow in one repository cannot overwrite a different app, and a wildcard gives that up.
+
+**Add `@refs/heads/main` to anything sensitive.** Without a ref constraint, a pull request from a fork runs with the same `repository` claim and may publish.
+
+| Variable | | |
+| --- | --- | --- |
+| `FLEDGE_OIDC_POLICY` | required to enable it | The allowlist, or `_FILE` to read it from a path |
+| `FLEDGE_OIDC_AUDIENCE` | defaults to `FLEDGE_PUBLIC_URL` | What stops a token minted for another service being replayed here |
+| `FLEDGE_OIDC_ISSUER` | defaults to GitHub Actions | Change it for another CI provider that issues OIDC tokens |
+
+The shared `FLEDGE_UPLOAD_TOKEN` still works and is unrestricted, which is what `fledge release` from a Mac uses.
+Workload tokens are restricted to their policy.
+
 ## Registering devices
 
 An ad hoc build installs only on devices named in its provisioning profile.

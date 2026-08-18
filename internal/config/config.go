@@ -13,10 +13,11 @@ import (
 // Defaults chosen so that a container with only FLEDGE_PUBLIC_URL and
 // FLEDGE_UPLOAD_TOKEN set is a working server.
 const (
-	DefaultAddr      = ":8080"
-	DefaultDataDir   = "/var/lib/fledge"
-	DefaultTitle     = "Fledge"
-	DefaultMaxUpload = 1 << 30
+	DefaultAddr       = ":8080"
+	DefaultDataDir    = "/var/lib/fledge"
+	DefaultTitle      = "Fledge"
+	DefaultMaxUpload  = 1 << 30
+	DefaultOIDCIssuer = "https://token.actions.githubusercontent.com"
 )
 
 // Config is the server's runtime configuration.
@@ -29,6 +30,20 @@ type Config struct {
 	MaxUpload   int64
 	Apple       Apple
 	Enroll      Enroll
+	Workloads   Workloads
+}
+
+// Workloads lets CI publish with a short-lived identity token instead of a
+// shared secret, so no long-lived credential has to sit in a repository.
+type Workloads struct {
+	Issuer   string
+	Audience string
+	Policy   string
+}
+
+// Enabled reports whether workload identity publishing is configured.
+func (w Workloads) Enabled() bool {
+	return w.Policy != ""
 }
 
 // Enroll configures device registration. It stays off until a token is set,
@@ -91,8 +106,32 @@ func Load() (*Config, error) {
 	if err := cfg.loadEnroll(); err != nil {
 		return nil, err
 	}
+	if err := cfg.loadWorkloads(); err != nil {
+		return nil, err
+	}
 
 	return cfg, cfg.validate()
+}
+
+func (c *Config) loadWorkloads() error {
+	c.Workloads = Workloads{
+		Issuer:   envOr("FLEDGE_OIDC_ISSUER", DefaultOIDCIssuer),
+		Audience: os.Getenv("FLEDGE_OIDC_AUDIENCE"),
+	}
+
+	policy, err := readPEM("FLEDGE_OIDC_POLICY")
+	if err != nil {
+		return err
+	}
+	c.Workloads.Policy = strings.TrimSpace(string(policy))
+
+	// The audience is what stops a token minted for another service being
+	// replayed here, so it defaults to this server rather than to anything.
+	if c.Workloads.Enabled() && c.Workloads.Audience == "" {
+		c.Workloads.Audience = c.PublicURL
+	}
+
+	return nil
 }
 
 func (c *Config) loadEnroll() error {
