@@ -200,9 +200,14 @@ func TestEnrolmentRoundTrip(t *testing.T) {
 		t.Error("the completion page did not bind this browser to the device")
 	}
 
-	// A challenge is single use, so replaying it must not re-bind a browser.
-	if replay := get(t, server, "/enroll/done?c="+url.QueryEscape(challenge)); replay.Code != http.StatusNotFound {
-		t.Errorf("replaying a claimed challenge = %d, want 404", replay.Code)
+	// The completion page has to survive being loaded twice: iOS follows the
+	// redirect itself and Safari then loads the same URL.
+	if second := get(t, server, "/enroll/done?c="+url.QueryEscape(challenge)); second.Code != http.StatusOK {
+		t.Errorf("second load of the completion page = %d, want 200", second.Code)
+	}
+
+	if unknown := get(t, server, "/enroll/done?c=neverissued"); unknown.Code != http.StatusNotFound {
+		t.Errorf("completion page for an unissued challenge = %d, want 404", unknown.Code)
 	}
 }
 

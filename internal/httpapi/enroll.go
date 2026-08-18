@@ -244,6 +244,13 @@ func (s *Server) handleEnrollDone(w http.ResponseWriter, r *http.Request) {
 // registerWithApple adds the device to the developer team. A slot spent here is
 // never returned, so the outcome is reported rather than passed over quietly.
 func (s *Server) registerWithApple(r *http.Request, device *enroll.Device) Notice {
+	// The device follows the completion redirect and Safari then loads the same
+	// page, so the second visit reports what the first one did rather than
+	// making the round trip again.
+	if stored, err := s.store.Device(device.UDID); err == nil && stored.Registered {
+		return s.settledNotice(stored, device)
+	}
+
 	ctx, cancel := context.WithTimeout(r.Context(), 20*time.Second)
 	defer cancel()
 
@@ -285,6 +292,27 @@ func (s *Server) registerWithApple(r *http.Request, device *enroll.Device) Notic
 	return Notice{
 		Level: "ok",
 		Title: "Already registered with Apple",
+		Body:  "No device slot was used. Publish a new build if this device is not yet in the profile.",
+	}
+}
+
+// settledNotice describes a device Apple already knows about, from what Fledge
+// recorded rather than from a fresh lookup.
+func (s *Server) settledNotice(stored *store.Device, device *enroll.Device) Notice {
+	if stored.Misnamed() {
+		return Notice{
+			Level: "warn",
+			Title: "Apple calls this device something else",
+			Body: "Your developer account has it as " + stored.AppleName + ", while the device reports " +
+				device.DisplayName() + ". Nothing is broken, but the name in the portal is misleading.",
+			Action:      "/enroll/rename",
+			ActionLabel: "Rename it to " + device.DisplayName(),
+		}
+	}
+
+	return Notice{
+		Level: "ok",
+		Title: "Registered with Apple",
 		Body:  "No device slot was used. Publish a new build if this device is not yet in the profile.",
 	}
 }
