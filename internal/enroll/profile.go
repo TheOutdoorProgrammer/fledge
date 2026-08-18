@@ -67,6 +67,20 @@ func NewChallenge() (string, error) {
 	return hex.EncodeToString(raw), nil
 }
 
+// newUUID returns an RFC 4122 version 4 identifier. iOS rejects the whole
+// profile as "Invalid Profile" if PayloadUUID is not in canonical dashed form,
+// which is not a validation error it explains.
+func newUUID() (string, error) {
+	raw := make([]byte, 16)
+	if _, err := rand.Read(raw); err != nil {
+		return "", err
+	}
+	raw[6] = (raw[6] & 0x0f) | 0x40
+	raw[8] = (raw[8] & 0x3f) | 0x80
+
+	return fmt.Sprintf("%x-%x-%x-%x-%x", raw[0:4], raw[4:6], raw[6:8], raw[8:10], raw[10:16]), nil
+}
+
 // Options configures one generated profile.
 type Options struct {
 	CallbackURL  string
@@ -89,7 +103,7 @@ func Profile(opts Options) ([]byte, error) {
 
 	uuid := opts.UUID
 	if uuid == "" {
-		generated, err := NewChallenge()
+		generated, err := newUUID()
 		if err != nil {
 			return nil, err
 		}
@@ -105,7 +119,7 @@ func Profile(opts Options) ([]byte, error) {
 		PayloadOrganization: organization,
 		PayloadDisplayName:  organization + " device registration",
 		PayloadDescription:  "Reads this device's identifier so builds can be signed for it. It installs nothing and grants no ongoing access.",
-		PayloadIdentifier:   "zone.fledge.enroll." + uuid,
+		PayloadIdentifier:   "zone.fledge.enroll",
 		PayloadUUID:         uuid,
 		PayloadType:         "Profile Service",
 		PayloadVersion:      1,
