@@ -47,6 +47,26 @@ func (p *Project) flag() []string {
 	return []string{"-project", p.Path}
 }
 
+// Open uses a workspace or project named explicitly, rather than searching.
+func Open(ctx context.Context, path string) (*Project, error) {
+	if _, err := os.Stat(path); err != nil {
+		return nil, err
+	}
+
+	project := &Project{
+		Path:        path,
+		IsWorkspace: filepath.Ext(path) == ".xcworkspace",
+	}
+
+	schemes, err := listSchemes(ctx, project)
+	if err != nil {
+		return nil, err
+	}
+	project.Schemes = schemes
+
+	return project, nil
+}
+
 // Discover finds the buildable in dir and lists its schemes. A workspace wins
 // over a project, matching what Xcode itself opens.
 func Discover(ctx context.Context, dir string) (*Project, error) {

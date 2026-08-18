@@ -1,0 +1,62 @@
+version: 2
+
+project_name: fledge
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: fledge
+    main: ./cmd/fledge
+    binary: fledge
+    env:
+      - CGO_ENABLED=0
+    goos: [darwin, linux]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+      - -X github.com/theoutdoorprogrammer/fledge/internal/version.Version={{ .Version }}
+      - -X github.com/theoutdoorprogrammer/fledge/internal/version.Commit={{ .ShortCommit }}
+      - -X github.com/theoutdoorprogrammer/fledge/internal/version.Date={{ .Date }}
+
+archives:
+  - id: fledge
+    ids: [fledge]
+    # The publish action fetches these by name, so the pattern is part of the
+    # contract rather than cosmetic.
+    name_template: "fledge_{{ .Os }}_{{ .Arch }}"
+    formats: [tar.gz]
+    files:
+      - README.md
+      - LICENSE
+
+checksums:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+release:
+  draft: false
+  prerelease: auto
+  footer: |
+    ## Publishing from CI
+
+    ```yaml
+    - uses: TheOutdoorProgrammer/fledge/actions/publish@v1
+      with:
+        server: ${{ "{{" }} secrets.FLEDGE_URL {{ "}}" }}
+        secure: true
+    ```

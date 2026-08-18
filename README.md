@@ -87,6 +87,49 @@ devices   3 registered
 dev mode  false
 ```
 
+## fledge.yaml
+
+Keep the settings beside the app and a release needs no arguments, on your Mac or in CI:
+
+```yaml
+# fledge.yaml
+server: https://fledge.example
+ipa: build/*.ipa
+
+build:
+  scheme: MyApp
+  method: release-testing
+
+fail_on_development_signing: true
+```
+
+```console
+fledge release      # archive, export and publish
+fledge upload       # publish whatever `ipa:` matches
+```
+
+Every field is optional. `fledge.yaml`, `fledge.yml`, `.fledge.yaml` and `.fledge.yml` are all recognised, searched from the working directory upward, so a spec at the repository root serves a project nested inside it.
+
+An unknown key is an error rather than something ignored, because a misspelled setting otherwise produces a release that quietly did not do what you asked.
+
+**Precedence is flag, then environment, then file.** That order is deliberate: it means a value you set for one run beats one checked into the repository, and it is what lets a public repository keep its server URL out of the tree.
+
+### Keeping the server address private
+
+`fledge.yaml` is committed, so in a public repository `server:` is public too.
+Leave it out and supply it from a secret instead:
+
+```yaml
+- uses: TheOutdoorProgrammer/fledge/actions/publish@v1
+  with:
+    server: ${{ secrets.FLEDGE_URL }}
+    secure: true
+```
+
+`secure: true` masks the server URL and its bare host in the log before anything runs, and leaves the install link out of the job summary, which is not passed through the log masker.
+Outputs still carry the real URLs so later steps can use them.
+Locally, `FLEDGE_SECURE=1` does the same for the CLI's own output.
+
 ## Publishing from CI
 
 There is a reusable action, and it can authenticate without any stored secret:

@@ -36,6 +36,13 @@ inputs:
     description: Write the install link to the workflow run summary.
     required: false
     default: "true"
+  secure:
+    description: >-
+      Keep the server URL out of the log and the run summary. Use it when the
+      repository is public and the server address is a secret. Outputs still
+      carry the URLs so later steps can use them; the log shows them redacted.
+    required: false
+    default: "false"
 
 outputs:
   install-url:
@@ -76,5 +83,6 @@ runs:
         FLEDGE_NOTES: ${{ inputs.notes }}
         FLEDGE_STRICT: ${{ inputs.fail-on-development-signing }}
         FLEDGE_SUMMARY: ${{ inputs.summary }}
+        FLEDGE_SECURE: ${{ inputs.secure }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
       run: ${{ github.action_path }}/publish.sh
