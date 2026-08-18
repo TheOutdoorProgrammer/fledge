@@ -30,7 +30,12 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	body := http.MaxBytesReader(w, r.Body, s.cfg.MaxUpload)
 	defer func() { _ = body.Close() }()
 
-	build, err := s.store.Put(body, r.Header.Get("X-Fledge-Notes"))
+	notes := r.URL.Query().Get("notes")
+	if notes == "" {
+		notes = r.Header.Get("X-Fledge-Notes")
+	}
+
+	build, err := s.store.Put(body, notes)
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {

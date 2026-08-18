@@ -84,6 +84,14 @@ func (s *Server) routes() {
 	s.mux.Handle("DELETE /api/apps/{bundle}/builds/{build}", s.authenticated(s.handleDeleteBuild))
 	s.mux.Handle("GET /api/devices", s.authenticated(s.handleListDevices))
 
+	s.mux.Handle("POST /api/invites", s.authenticated(s.handleCreateInvite))
+	s.mux.Handle("GET /api/invites", s.authenticated(s.handleListInvites))
+	s.mux.Handle("DELETE /api/invites/{invite}", s.authenticated(s.handleRevokeInvite))
+
+	// Open on purpose: an installed app asks this, and the answer is the same
+	// metadata the install page shows anyone.
+	s.mux.HandleFunc("GET /api/v1/apps/{bundle}/latest", s.handleLatest)
+
 	s.enrollRoutes()
 }
 

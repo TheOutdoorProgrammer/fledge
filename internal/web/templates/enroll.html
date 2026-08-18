@@ -18,6 +18,17 @@
 </div>
 {{end}}
 
+{{with .Invite}}{{with .Note}}
+<div class="notices">
+  <div class="notice ok">
+    <div>
+      <strong>This invitation is for {{.}}</strong>
+      It registers one device and is then spent. If that is not you, ask for your own.
+    </div>
+  </div>
+</div>
+{{end}}{{end}}
+
 {{if not .Signed}}
 <div class="notices">
   <div class="notice warn">

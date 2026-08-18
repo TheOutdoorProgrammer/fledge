@@ -15,6 +15,7 @@ type Sessions struct {
 type session struct {
 	issued time.Time
 	device *Device
+	invite string
 }
 
 // NewSessions builds an empty tracker.
@@ -24,6 +25,12 @@ func NewSessions() *Sessions {
 
 // Begin mints a challenge and starts tracking it.
 func (s *Sessions) Begin() (string, error) {
+	return s.BeginFor("")
+}
+
+// BeginFor mints a challenge and remembers which invitation produced it, so the
+// right one is redeemed when a device answers.
+func (s *Sessions) BeginFor(invite string) (string, error) {
 	challenge, err := NewChallenge()
 	if err != nil {
 		return "", err
@@ -33,9 +40,21 @@ func (s *Sessions) Begin() (string, error) {
 	defer s.mu.Unlock()
 
 	s.sweep(time.Now())
-	s.pending[challenge] = &session{issued: time.Now()}
+	s.pending[challenge] = &session{issued: time.Now(), invite: invite}
 
 	return challenge, nil
+}
+
+// Invite returns the invitation a challenge was issued against.
+func (s *Sessions) Invite(challenge string) string {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if entry, ok := s.pending[challenge]; ok {
+		return entry.invite
+	}
+
+	return ""
 }
 
 // Outstanding reports whether a challenge is live and still unanswered.

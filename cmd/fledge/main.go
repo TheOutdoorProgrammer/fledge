@@ -23,6 +23,9 @@ Usage:
   fledge builds <bundle-id>     List an app's builds
   fledge devices                List enrolled devices
   fledge apple                  Show Apple device slots and registered devices
+  fledge invite create          Mint a link that registers one device
+  fledge invite list            Show every invitation and what became of it
+  fledge invite revoke <id>     Close an unused invitation
   fledge version
 
 The server and token come from FLEDGE_URL and FLEDGE_TOKEN, or from -server and
@@ -64,6 +67,8 @@ func dispatch(ctx context.Context, args []string) error {
 		return devicesCommand(ctx, rest)
 	case "apple":
 		return appleCommand(ctx, rest)
+	case "invite":
+		return inviteCommand(ctx, rest)
 	case "version":
 		fmt.Println("fledge", version.String())
 		return nil

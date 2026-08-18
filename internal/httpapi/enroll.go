@@ -33,6 +33,7 @@ type enrollView struct {
 	Title    string
 	Signed   bool
 	Capacity *capacityView
+	Invite   *store.Invite
 }
 
 func (s *Server) enrollRoutes() {
@@ -43,44 +44,60 @@ func (s *Server) enrollRoutes() {
 	s.mux.HandleFunc("POST /enroll/rename", s.handleEnrollRename)
 }
 
-// authorizedToEnroll gates the pages a person drives. The callback and the
-// completion page are not gated because iOS drives those and sends no token;
-// they are bound by the challenge instead.
-func (s *Server) authorizedToEnroll(w http.ResponseWriter, r *http.Request) bool {
-	if !s.cfg.Enroll.Enabled() {
-		return false
-	}
-
+// invitation resolves the permit a visitor is holding, from the link or from
+// the cookie the link set. The callback and completion page are not gated,
+// because iOS drives those and sends no token; the challenge binds them.
+func (s *Server) invitation(w http.ResponseWriter, r *http.Request) *store.Invite {
 	presented := r.URL.Query().Get("t")
 	if presented == "" {
 		if cookie, err := r.Cookie(enrollCookie); err == nil {
 			presented = cookie.Value
 		}
 	}
-	if subtle.ConstantTimeCompare([]byte(presented), []byte(s.cfg.Enroll.Token)) != 1 {
-		return false
+	if presented == "" {
+		return nil
 	}
 
+	// A permanent token, when one is configured, behaves as an invite that never
+	// runs out. It exists for a single operator server and is not the default.
+	if s.cfg.Enroll.Token != "" &&
+		subtle.ConstantTimeCompare([]byte(presented), []byte(s.cfg.Enroll.Token)) == 1 {
+		s.rememberInvite(w, presented)
+		return &store.Invite{ID: presented, Note: "standing invitation", Expires: farFuture}
+	}
+
+	invite, err := s.store.Invite(presented)
+	if err != nil || invite.Spent(time.Now()) {
+		return nil
+	}
+	s.rememberInvite(w, presented)
+
+	return invite
+}
+
+// farFuture stands in for the standing invitation's expiry.
+var farFuture = time.Date(9999, 1, 1, 0, 0, 0, 0, time.UTC)
+
+func (s *Server) rememberInvite(w http.ResponseWriter, id string) {
 	http.SetCookie(w, &http.Cookie{
 		Name:     enrollCookie,
-		Value:    s.cfg.Enroll.Token,
+		Value:    id,
 		Path:     "/enroll",
 		MaxAge:   3600,
 		HttpOnly: true,
 		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
-
-	return true
 }
 
 func (s *Server) handleEnrollPage(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizedToEnroll(w, r) {
+	invite := s.invitation(w, r)
+	if invite == nil {
 		s.enrollUnavailable(w)
 		return
 	}
 
-	view := enrollView{Title: s.cfg.Title, Signed: s.cfg.Enroll.CanSign()}
+	view := enrollView{Title: s.cfg.Title, Signed: s.cfg.Enroll.CanSign(), Invite: invite}
 	view.Capacity = s.appleCapacity(r)
 
 	web.Render(w, http.StatusOK, "enroll", view)
@@ -122,12 +139,15 @@ func (s *Server) appleCapacity(r *http.Request) *capacityView {
 }
 
 func (s *Server) handleEnrollProfile(w http.ResponseWriter, r *http.Request) {
-	if !s.authorizedToEnroll(w, r) {
+	invite := s.invitation(w, r)
+	if invite == nil {
 		s.enrollUnavailable(w)
 		return
 	}
 
-	challenge, err := s.sessions.Begin()
+	// The invite travels with the challenge so the callback can redeem the one
+	// that actually produced this device, not whatever cookie arrives later.
+	challenge, err := s.sessions.BeginFor(invite.ID)
 	if err != nil {
 		s.fail(w, r, err)
 		return
@@ -193,6 +213,14 @@ func (s *Server) handleEnrollCallback(w http.ResponseWriter, r *http.Request) {
 		s.log.Error("could not record an enrolled device", "error", err)
 		http.Error(w, "could not record the device", http.StatusInternalServerError)
 		return
+	}
+
+	// Spend the invitation only now, when a real device has answered. Redeeming
+	// it at download time would burn it on anyone who opened the page.
+	if invite := s.sessions.Invite(challenge); invite != "" && invite != s.cfg.Enroll.Token {
+		if err := s.store.RedeemInvite(invite, device.UDID); err != nil {
+			s.log.Warn("could not redeem an invitation", "invite", invite, "error", err)
+		}
 	}
 
 	s.sessions.Complete(challenge, device)

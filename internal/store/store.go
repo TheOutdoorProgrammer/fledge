@@ -210,6 +210,27 @@ func (s *Store) Latest(bundleID string) (*Build, error) {
 	return builds[0], nil
 }
 
+// Since returns the builds published after the one an app is running, newest
+// first. Upload order decides rather than version strings, and an unrecognised
+// build yields the whole history rather than an empty answer.
+func (s *Store) Since(bundleID, build string) ([]*Build, error) {
+	builds, err := s.Builds(bundleID)
+	if err != nil {
+		return nil, err
+	}
+	if build == "" {
+		return builds, nil
+	}
+
+	for index, candidate := range builds {
+		if candidate.App.Build == build || candidate.ID == build {
+			return builds[:index], nil
+		}
+	}
+
+	return builds, nil
+}
+
 // OpenPackage returns the stored archive together with its size, which the
 // handler needs to serve a range-capable download.
 func (s *Store) OpenPackage(bundleID, buildID string) (*os.File, int64, error) {

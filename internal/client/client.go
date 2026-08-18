@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"strings"
 	"time"
@@ -60,15 +61,19 @@ func (c *Client) Upload(ctx context.Context, path, notes string) (*Build, error)
 		return nil, err
 	}
 
-	request, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/api/builds", file)
+	// Notes travel in the query rather than a header: a changelog is multi-line
+	// markdown, and header values cannot carry newlines.
+	endpoint := c.BaseURL + "/api/builds"
+	if notes != "" {
+		endpoint += "?notes=" + url.QueryEscape(notes)
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, file)
 	if err != nil {
 		return nil, err
 	}
 	request.Header.Set("Content-Type", "application/octet-stream")
 	request.ContentLength = stat.Size()
-	if notes != "" {
-		request.Header.Set("X-Fledge-Notes", notes)
-	}
 
 	var build Build
 	if err := c.do(request, &build); err != nil {
@@ -120,6 +125,62 @@ func (c *Client) Devices(ctx context.Context) ([]*store.Device, error) {
 	}
 
 	return response.Devices, nil
+}
+
+// Invite is a permit to register one device.
+type Invite struct {
+	ID      string     `json:"id"`
+	Note    string     `json:"note"`
+	State   string     `json:"state"`
+	URL     string     `json:"url"`
+	Created time.Time  `json:"created"`
+	Expires time.Time  `json:"expires"`
+	Used    *time.Time `json:"used"`
+	UsedBy  string     `json:"used_by"`
+}
+
+// CreateInvite mints a permit. The expiry is a Go duration such as 168h.
+func (c *Client) CreateInvite(ctx context.Context, note, expires string) (*Invite, error) {
+	payload, err := json.Marshal(map[string]string{"note": note, "expires": expires})
+	if err != nil {
+		return nil, err
+	}
+
+	request, err := http.NewRequestWithContext(ctx, http.MethodPost,
+		c.BaseURL+"/api/invites", bytes.NewReader(payload))
+	if err != nil {
+		return nil, err
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	var invite Invite
+	if err := c.do(request, &invite); err != nil {
+		return nil, err
+	}
+
+	return &invite, nil
+}
+
+// Invites lists every permit, newest first.
+func (c *Client) Invites(ctx context.Context) ([]Invite, error) {
+	var response struct {
+		Invites []Invite `json:"invites"`
+	}
+	if err := c.get(ctx, "/api/invites", &response); err != nil {
+		return nil, err
+	}
+
+	return response.Invites, nil
+}
+
+// RevokeInvite closes an unused permit.
+func (c *Client) RevokeInvite(ctx context.Context, id string) error {
+	request, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.BaseURL+"/api/invites/"+id, nil)
+	if err != nil {
+		return err
+	}
+
+	return c.do(request, nil)
 }
 
 // Delete removes one published build.

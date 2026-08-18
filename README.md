@@ -199,6 +199,94 @@ The mechanism behind this is Apple's OTA Profile Service, documented only in App
 It works, and every UDID-capture service depends on it, but it is undocumented legacy surface that Apple can withdraw without notice.
 Test it against a real device before you rely on it.
 
+## Letting an app check itself
+
+An installed app can ask whether it is behind and what it missed:
+
+```console
+GET /api/v1/apps/{bundle-id}/latest?build={CFBundleVersion}
+```
+
+```json
+{
+  "version": "1.2",
+  "build": "3",
+  "update_available": true,
+  "install_page_url": "https://fledge.example/a/com.example.app",
+  "changelog": [
+    { "version": "1.2", "build": "3", "notes": "## Added\n\n- offline mode" },
+    { "version": "1.1", "build": "2", "notes": "## Fixed\n\n- the launch crash" }
+  ]
+}
+```
+
+`changelog` holds every release *since the build you passed*, newest first, so the app can show a user everything they missed rather than only the most recent line.
+Releases published with no notes are left out, because they render as blank rows.
+A build this server never published gets the whole history, which is the right answer for a fresh install.
+
+The endpoint is open on purpose: the app asking is already installed, and the answer is the same metadata the install page shows anyone. Requiring a credential would mean shipping one inside the binary.
+
+```swift
+struct Release: Decodable {
+    let version: String, build: String, notes: String?
+}
+
+struct Latest: Decodable {
+    let version: String
+    let updateAvailable: Bool
+    let installPageURL: URL
+    let changelog: [Release]
+
+    enum CodingKeys: String, CodingKey {
+        case version
+        case updateAvailable = "update_available"
+        case installPageURL = "install_page_url"
+        case changelog
+    }
+}
+
+func checkForUpdate() async throws -> Latest {
+    let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? ""
+    let bundleID = Bundle.main.bundleIdentifier ?? ""
+    var url = URL(string: "https://fledge.example/api/v1/apps/\(bundleID)/latest")!
+    url.append(queryItems: [URLQueryItem(name: "build", value: build)])
+
+    let (data, _) = try await URLSession.shared.data(from: url)
+    return try JSONDecoder().decode(Latest.self, from: data)
+}
+```
+
+Send the user to `installPageURL`, not the `itms-services://` URL: it only works from Safari, and the page also tells them whether their device is in the build.
+
+Notes are markdown, so write a real changelog:
+
+```console
+fledge upload -notes "$(cat CHANGELOG-latest.md)" build.ipa
+```
+
+## Inviting someone
+
+Anyone can browse and install. Registering a device needs an invitation, because that spends one of your hundred annual Apple slots permanently.
+
+```console
+fledge invite create -note "Kay's iPhone"
+```
+
+```text
+Invitation for Kay's iPhone
+  expires  2026-08-25 17:04
+
+Send this. It registers one device, then it is spent:
+  https://fledge.example/enroll?t=…
+```
+
+The permit is spent when a device actually registers, not when someone opens the page, so a link that gets read and ignored is not wasted.
+`fledge invite list` shows every invitation and what became of it; `fledge invite revoke <id>` closes an unused one.
+Spent invitations stop advertising their link so a used one cannot be handed out again by mistake.
+
+Setting `FLEDGE_ENROLL_TOKEN` gives a standing invitation that never runs out.
+It suits a server with one operator and is deliberately not the default.
+
 ## Configuration
 
 | Variable | Required | Default | Notes |
