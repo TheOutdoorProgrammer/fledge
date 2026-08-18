@@ -10,3 +10,4 @@ coverage.out
 *.p12
 
 .DS_Store
+dist/
