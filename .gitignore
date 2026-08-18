@@ -1,0 +1,12 @@
+bin/
+coverage.out
+
+# Exported archives and anything Xcode leaves behind. Signed output never
+# belongs in the repository.
+*.ipa
+*.xcarchive/
+*.mobileprovision
+*.p8
+*.p12
+
+.DS_Store

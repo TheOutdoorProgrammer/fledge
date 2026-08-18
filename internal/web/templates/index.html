@@ -1,0 +1,42 @@
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "body"}}
+{{if .Apps}}
+<p style="color:var(--muted)">Open one of these on the iPhone or iPad you want to install it on. Use Safari.</p>
+{{range .Apps}}
+<div class="card">
+  <a class="stretched" href="/a/{{.BundleID}}">
+    <div class="app-head">
+      <img src="{{.IconURL}}" alt="" width="68" height="68">
+      <div class="meta">
+        <h1 style="font-size:1.15rem">{{.Name}}</h1>
+        <div class="sub">{{.Version}} ({{.Build}}) &middot; {{since .Uploaded}}</div>
+        <div class="badges">
+          <span class="badge info">{{.ProfileType}}</span>
+          {{if .Expired}}<span class="badge bad">expired</span>
+          {{else if .ExpiringSoon}}<span class="badge warn">expiring</span>{{end}}
+          <span class="badge plain">{{.BuildCount}} build{{if ne .BuildCount 1}}s{{end}}</span>
+        </div>
+      </div>
+    </div>
+  </a>
+</div>
+{{end}}
+{{else}}
+<div class="card">
+  <h1 style="font-size:1.2rem">Nothing published yet</h1>
+  <p style="color:var(--muted);margin:0">Run <code>fledge release</code> in an app repository, or upload an exported archive with <code>fledge upload build.ipa</code>.</p>
+</div>
+{{end}}
+
+<h2>This device</h2>
+<div class="card">
+  {{if .Device}}
+    <p style="margin:0">Registered as <strong>{{.Device.Name}}</strong>.</p>
+    <p class="mono" style="color:var(--muted);margin:.3rem 0 0;font-size:.82rem">{{.Device.UDID}}</p>
+  {{else}}
+    <p style="margin:0 0 .2rem">Fledge does not know which device this is, so it cannot tell you in advance whether a build will install.</p>
+    <a class="button secondary" href="/enroll">Register this device</a>
+  {{end}}
+</div>
+{{end}}

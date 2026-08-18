@@ -1,0 +1,122 @@
+{{define "layout"}}<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>{{block "title" .}}Fledge{{end}}</title>
+<style>
+:root {
+  --bg: #282a36;
+  --surface: #21222c;
+  --line: #44475a;
+  --fg: #f8f8f2;
+  --muted: #6272a4;
+  --cyan: #8be9fd;
+  --green: #50fa7b;
+  --orange: #ffb86c;
+  --pink: #ff79c6;
+  --purple: #bd93f9;
+  --red: #ff5555;
+  --yellow: #f1fa8c;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 1.5rem 1rem 4rem;
+  background: var(--bg);
+  color: var(--fg);
+  font: 16px/1.55 ui-rounded, -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+main { max-width: 44rem; margin: 0 auto; }
+a { color: var(--cyan); }
+h1, h2, h3 { line-height: 1.2; margin: 0 0 .5rem; }
+h1 { font-size: 1.6rem; }
+h2 { font-size: 1.05rem; color: var(--muted); text-transform: uppercase; letter-spacing: .07em; margin-top: 2.5rem; }
+p { margin: 0 0 .75rem; }
+code, .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .85em; }
+
+.masthead { display: flex; align-items: center; gap: .6rem; margin-bottom: 2rem; }
+.masthead a { color: var(--fg); text-decoration: none; font-weight: 600; }
+.masthead .mark { color: var(--purple); font-size: 1.3rem; }
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 1.1rem;
+  margin-bottom: .85rem;
+}
+.card a.stretched { color: inherit; text-decoration: none; display: block; }
+
+.app-head { display: flex; gap: 1rem; align-items: center; }
+.app-head img { width: 68px; height: 68px; border-radius: 15px; flex: none; background: var(--line); }
+.app-head .meta { min-width: 0; }
+.app-head h1 { margin: 0; overflow-wrap: anywhere; }
+.app-head .sub { color: var(--muted); font-size: .9rem; overflow-wrap: anywhere; }
+
+.badges { display: flex; flex-wrap: wrap; gap: .4rem; margin: .9rem 0 0; }
+.badge {
+  font-size: .75rem; font-weight: 600; letter-spacing: .03em;
+  padding: .2rem .55rem; border-radius: 999px;
+  border: 1px solid currentColor;
+}
+.badge.ok { color: var(--green); }
+.badge.warn { color: var(--orange); }
+.badge.bad { color: var(--red); }
+.badge.info { color: var(--purple); }
+.badge.plain { color: var(--muted); }
+
+.note {
+  border-left: 3px solid var(--muted);
+  background: rgba(98, 114, 164, .13);
+  border-radius: 0 10px 10px 0;
+  padding: .7rem .85rem;
+  margin: 0 0 .8rem;
+  font-size: .92rem;
+}
+.note strong { display: block; margin-bottom: .15rem; }
+.note.ok { border-color: var(--green); background: rgba(80, 250, 123, .1); }
+.note.warn { border-color: var(--orange); background: rgba(255, 184, 108, .11); }
+.note.bad { border-color: var(--red); background: rgba(255, 85, 85, .11); }
+
+.button {
+  display: block; width: 100%;
+  padding: .95rem 1rem;
+  border: 0; border-radius: 12px;
+  background: linear-gradient(180deg, var(--purple), #a97ee8);
+  color: #1b1c24; font-size: 1.05rem; font-weight: 700;
+  text-align: center; text-decoration: none;
+  margin: 1.1rem 0 .4rem;
+}
+.button.secondary { background: none; border: 1px solid var(--line); color: var(--fg); font-weight: 600; font-size: .95rem; }
+.button[aria-disabled="true"] { background: var(--line); color: var(--muted); pointer-events: none; }
+
+dl.facts { display: grid; grid-template-columns: auto 1fr; gap: .35rem .9rem; margin: 1rem 0 0; font-size: .9rem; }
+dl.facts dt { color: var(--muted); }
+dl.facts dd { margin: 0; overflow-wrap: anywhere; }
+
+ol.steps { margin: .4rem 0 0; padding-left: 1.2rem; font-size: .92rem; }
+ol.steps li { margin-bottom: .3rem; }
+
+.qr { display: block; margin: 1.2rem auto .4rem; width: 190px; height: 190px; border-radius: 12px; background: #fff; padding: 9px; }
+
+.rows { list-style: none; margin: 0; padding: 0; }
+.rows li { border-top: 1px solid var(--line); }
+.rows li:first-child { border-top: 0; }
+.rows a { display: flex; justify-content: space-between; gap: 1rem; padding: .7rem .1rem; text-decoration: none; color: var(--fg); }
+.rows .right { color: var(--muted); font-size: .85rem; text-align: right; flex: none; }
+.rows .current { color: var(--green); }
+
+footer { margin-top: 3rem; color: var(--muted); font-size: .8rem; text-align: center; }
+</style>
+</head>
+<body>
+<main>
+  <div class="masthead"><span class="mark">◆</span><a href="/">{{.Title}}</a></div>
+  {{block "body" .}}{{end}}
+  <footer>Fledge &middot; ad hoc iOS distribution</footer>
+</main>
+</body>
+</html>{{end}}

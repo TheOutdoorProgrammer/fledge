@@ -1,0 +1,85 @@
+{{define "title"}}{{.Build.App.Name}} {{.Build.App.Version}}{{end}}
+
+{{define "body"}}
+<div class="card">
+  <div class="app-head">
+    <img src="{{.IconURL}}" alt="" width="68" height="68">
+    <div class="meta">
+      <h1>{{.Build.App.Name}}</h1>
+      <div class="sub">{{.Build.App.Version}} ({{.Build.App.Build}}) &middot; {{.Build.App.BundleID}}</div>
+    </div>
+  </div>
+
+  <div class="badges">
+    {{with .Build.App.Profile}}
+      <span class="badge info">{{.Type}}</span>
+      {{if $.Expired}}<span class="badge bad">expired</span>
+      {{else if $.ExpiringSoon}}<span class="badge warn">expires {{until .Expires}}</span>
+      {{else}}<span class="badge ok">expires {{until .Expires}}</span>{{end}}
+    {{end}}
+    <span class="badge plain">{{bytes .Build.App.Size}}</span>
+    {{if .IsLatest}}<span class="badge ok">latest</span>{{else}}<span class="badge warn">superseded</span>{{end}}
+  </div>
+</div>
+
+{{range .Notices}}
+<div class="note {{.Level}}">
+  <strong>{{.Title}}</strong>
+  {{.Body}}
+</div>
+{{end}}
+
+{{if .Installable}}
+  <a class="button" href="{{.InstallURL}}">Install {{.Build.App.Name}}</a>
+{{else}}
+  <span class="button" aria-disabled="true">Install unavailable</span>
+{{end}}
+
+<div class="card">
+  <h3 style="margin-top:0;font-size:.95rem">After you tap Install</h3>
+  <ol class="steps">
+    <li>Confirm the prompt. The icon appears on your Home Screen and fills in as it downloads.</li>
+    {{if .Build.App.RequiresDeveloperMode}}
+    <li>Open <strong>Settings &rsaquo; Privacy &amp; Security &rsaquo; Developer Mode</strong>, turn it on, and restart. The app will not launch until you do.</li>
+    {{end}}
+    <li>If iOS says the developer is untrusted, trust it under <strong>Settings &rsaquo; General &rsaquo; VPN &amp; Device Management</strong>.</li>
+  </ol>
+</div>
+
+{{if .QRDataURI}}
+<div class="card">
+  <h3 style="margin-top:0;font-size:.95rem">Install on another device</h3>
+  <p style="color:var(--muted);font-size:.9rem;margin:0">Scan with the Camera app. It opens this page in Safari, which is the only browser the installer reliably works from.</p>
+  <img class="qr" src="{{.QRDataURI}}" alt="QR code linking to this page" width="190" height="190">
+</div>
+{{end}}
+
+<div class="card">
+  <dl class="facts">
+    <dt>Bundle</dt><dd class="mono">{{.Build.App.BundleID}}</dd>
+    <dt>Build</dt><dd class="mono">{{.Build.ID}}</dd>
+    <dt>Uploaded</dt><dd>{{since .Build.Uploaded}}</dd>
+    {{with .Build.App.MinimumOS}}<dt>Requires</dt><dd>iOS {{.}} or later</dd>{{end}}
+    {{with .Build.App.Profile}}
+      <dt>Team</dt><dd>{{.TeamName}} <span class="mono">({{.TeamID}})</span></dd>
+      <dt>Profile</dt><dd>{{.Name}}</dd>
+      <dt>Devices</dt><dd>{{if .ProvisionsAllDevices}}any device{{else}}{{len .Devices}} registered{{end}}</dd>
+    {{end}}
+    {{with .Build.Notes}}<dt>Notes</dt><dd>{{.}}</dd>{{end}}
+  </dl>
+</div>
+
+{{if gt (len .History) 1}}
+<h2>Earlier builds</h2>
+<div class="card">
+  <ul class="rows">
+    {{range .History}}
+    <li><a href="{{$.BasePath}}/{{.ID}}">
+      <span>{{.App.Version}} ({{.App.Build}}){{if eq .ID $.Build.ID}} <span class="current">&larr; showing</span>{{end}}</span>
+      <span class="right">{{since .Uploaded}}<br>{{bytes .App.Size}}</span>
+    </a></li>
+    {{end}}
+  </ul>
+</div>
+{{end}}
+{{end}}

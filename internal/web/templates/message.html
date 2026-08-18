@@ -1,0 +1,15 @@
+{{define "title"}}{{.Heading}}{{end}}
+
+{{define "body"}}
+<div class="card">
+  <h1>{{.Heading}}</h1>
+  <p style="color:var(--muted);margin:0">{{.Detail}}</p>
+</div>
+{{range .Notices}}
+<div class="note {{.Level}}">
+  <strong>{{.Title}}</strong>
+  {{.Body}}
+</div>
+{{end}}
+{{if .BackLink}}<a class="button secondary" href="{{.BackLink}}">{{.BackLabel}}</a>{{end}}
+{{end}}
