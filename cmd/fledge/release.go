@@ -158,12 +158,16 @@ func uploadCommand(ctx context.Context, args []string) error {
 		return err
 	}
 
+	// Both sources go through the same expansion. An argument used to be taken
+	// literally, which made a caller passing a pattern, as the publish action
+	// documents, fail with a confusing "no such file" naming the pattern.
 	archive := flags.Arg(0)
 	if archive == "" {
-		archive, err = soleMatch(config.IPA)
-		if err != nil {
-			return err
-		}
+		archive = config.IPA
+	}
+	archive, err = soleMatch(archive)
+	if err != nil {
+		return err
 	}
 
 	api, err := newClient(spec.First(*server, os.Getenv("FLEDGE_URL"), config.Server), *token)
