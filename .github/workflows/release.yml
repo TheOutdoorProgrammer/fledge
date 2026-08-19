@@ -1,22 +1,42 @@
 name: release
 
-on:
-  push:
-    # Semver tags only. The moving `v1` that pins the action matches `v*` too,
-    # so a broader pattern makes every action retag start a release, against the
-    # wrong tag and racing the real one for the same asset names.
-    tags: ["v[0-9]+.[0-9]+.[0-9]+"]
+# The only way to cut a release. Quill works out the version, proves the build
+# before it commits to a number, tags, publishes, and takes the tag back if any
+# of that fails.
 
-permissions:
-  contents: write
-  packages: write
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: What to cut
+        type: choice
+        default: Release
+        options: [Release, Release Candidate]
+      bump:
+        description: Which part of the version to bump
+        type: choice
+        default: patch
+        options: [patch, minor, major]
+      dry-run:
+        description: Build everything, publish nothing
+        type: boolean
+        default: false
+
+permissions: {}
 
 jobs:
-  binaries:
+  release:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
     steps:
       - uses: actions/checkout@v5
         with:
+          # Quill reads the tag list to work out the next version, and the
+          # default shallow checkout carries no tags at all.
           fetch-depth: 0
 
       - uses: actions/setup-go@v6
@@ -24,56 +44,17 @@ jobs:
           go-version-file: go.mod
           cache: true
 
-      # A token scoped to the tap only. The default GITHUB_TOKEN cannot write to
-      # another repository, so without this the cask is silently never updated.
-      - name: Mint a token for the tap
-        id: tap_token
-        uses: actions/create-github-app-token@v3
+      - uses: TheOutdoorProgrammer/quill@v1
         with:
-          app-id: ${{ secrets.TAP_APP_ID }}
-          private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: homebrew-tap
-
-      - uses: goreleaser/goreleaser-action@v6
-        with:
-          version: "~> v2"
-          args: release --clean
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          HOMEBREW_TAP_GITHUB_TOKEN: ${{ steps.tap_token.outputs.token }}
-
-  image:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-
-      - uses: docker/setup-buildx-action@v3
-
-      - uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest
-
-      - uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          platforms: linux/amd64,linux/arm64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            VERSION=${{ github.ref_name }}
-            COMMIT=${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          bump: ${{ inputs.bump }}
+          scope: ${{ inputs.scope }}
+          dry-run: ${{ inputs.dry-run }}
+          publish: goreleaser, docker
+          # A token scoped to the tap only. The job's own token cannot write to
+          # another repository, so without this the cask is never updated.
+          tap-app-id: ${{ secrets.TAP_APP_ID }}
+          tap-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+          docker-sbom: "true"
+          docker-provenance: mode=max
+          docker-sign: "true"
+          docker-attest: "true"
