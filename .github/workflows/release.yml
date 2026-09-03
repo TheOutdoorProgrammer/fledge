@@ -54,6 +54,7 @@ jobs:
           # another repository, so without this the cask is never updated.
           tap-app-id: ${{ secrets.TAP_APP_ID }}
           tap-private-key: ${{ secrets.TAP_APP_PRIVATE_KEY }}
+          tap-owner: NerdsWhoFish
           docker-sbom: "true"
           docker-provenance: mode=max
           docker-sign: "true"

@@ -44,7 +44,7 @@ homebrew_casks:
     # `brew install fledge` gives you.
     skip_upload: auto
     repository:
-      owner: TheOutdoorProgrammer
+      owner: NerdsWhoFish
       name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"

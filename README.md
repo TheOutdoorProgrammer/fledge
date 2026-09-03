@@ -48,7 +48,7 @@ What registration protects is different and irreversible: it spends one of a hun
 ## Install
 
 ```console
-brew install theoutdoorprogrammer/tap/fledge
+brew install NerdsWhoFish/tap/fledge
 ```
 
 Or grab a binary from [the releases](https://github.com/TheOutdoorProgrammer/fledge/releases), or build it:
