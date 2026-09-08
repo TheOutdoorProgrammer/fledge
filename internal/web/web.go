@@ -7,13 +7,14 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"path"
 	"strings"
 	"time"
 )
 
 //go:generate go run ./assets/generate -out ./assets
-//go:embed templates/*.html assets/*.png
+//go:embed templates/*.html assets/*.png assets/telemetry.*
 var templateFS embed.FS
 
 // pages holds one fully parsed template set per page. They cannot share a set:
@@ -73,6 +74,7 @@ func Asset(name string) ([]byte, error) {
 
 func helpers() template.FuncMap {
 	return template.FuncMap{
+		"faroURL":  func() string { return os.Getenv("FARO_COLLECTOR_URL") },
 		"bytes":    humanBytes,
 		"since":    humanSince,
 		"until":    humanUntil,

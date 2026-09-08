@@ -17,9 +17,14 @@ help: ## Show this help
 		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: build
-build: ## Build both binaries into bin/
+build: browser ## Build both binaries into bin/
 	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/fledged ./cmd/fledged
 	go build -trimpath -ldflags "$(LDFLAGS)" -o bin/fledge ./cmd/fledge
+
+.PHONY: browser
+browser: ## Build the bundled browser error capture
+	npm ci
+	npm run build
 
 .PHONY: install
 install: ## Install the CLI into ~/bin

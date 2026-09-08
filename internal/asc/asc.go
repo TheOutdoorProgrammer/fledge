@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/theoutdoorprogrammer/fledge/internal/telemetry"
 )
 
 const baseURL = "https://api.appstoreconnect.apple.com"
@@ -66,7 +67,7 @@ func New(issuerID, keyID string, privateKey []byte) (*Client, error) {
 		issuerID: issuerID,
 		keyID:    keyID,
 		key:      key,
-		http:     &http.Client{Timeout: 30 * time.Second},
+		http:     telemetry.HTTPClient(30 * time.Second),
 	}, nil
 }
 

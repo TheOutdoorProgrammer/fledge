@@ -11,3 +11,6 @@ coverage.out
 
 .DS_Store
 dist/
+node_modules/
+internal/web/assets/telemetry.js
+internal/web/assets/telemetry.js.map

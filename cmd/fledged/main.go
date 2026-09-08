@@ -16,11 +16,13 @@ import (
 	"github.com/theoutdoorprogrammer/fledge/internal/httpapi"
 	"github.com/theoutdoorprogrammer/fledge/internal/oidc"
 	"github.com/theoutdoorprogrammer/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/telemetry"
 	"github.com/theoutdoorprogrammer/fledge/internal/version"
 )
 
 func main() {
-	log := slog.New(slog.NewTextHandler(os.Stderr, &slog.HandlerOptions{Level: slog.LevelInfo}))
+	log := telemetry.Logger(os.Stdout)
+	slog.SetDefault(log)
 
 	if err := run(log); err != nil {
 		log.Error("fledged", "error", err)
@@ -29,6 +31,17 @@ func main() {
 }
 
 func run(log *slog.Logger) error {
+	shutdown, err := telemetry.Start(context.Background(), "fledge")
+	if err != nil {
+		return err
+	}
+	defer shutdown()
+	return telemetry.Operation(context.Background(), "application.run", func(ctx context.Context) error {
+		return serve(ctx, log)
+	})
+}
+
+func serve(ctx context.Context, log *slog.Logger) error {
 	cfg, err := config.Load()
 	if err != nil {
 		return err
@@ -53,7 +66,7 @@ func run(log *slog.Logger) error {
 		if err != nil {
 			return err
 		}
-		workloads, err = oidc.New(context.Background(), cfg.Workloads.Issuer, cfg.Workloads.Audience, policy)
+		workloads, err = oidc.New(ctx, cfg.Workloads.Issuer, cfg.Workloads.Audience, policy)
 		if err != nil {
 			return err
 		}
@@ -63,7 +76,7 @@ func run(log *slog.Logger) error {
 
 	server := &http.Server{
 		Addr:              cfg.Addr,
-		Handler:           httpapi.New(cfg, st, httpapi.Options{Apple: apple, Workloads: workloads}, log),
+		Handler:           telemetry.HTTPHandler(httpapi.New(cfg, st, httpapi.Options{Apple: apple, Workloads: workloads}, log)),
 		ReadHeaderTimeout: 10 * time.Second,
 		// Uploads are whole application archives over a home network, so the
 		// write timeout has to tolerate a slow client rather than a slow handler.

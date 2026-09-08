@@ -175,7 +175,7 @@ func (s *Store) Builds(bundleID string) ([]*Build, error) {
 		}
 		build, err := s.readBuild(bundleID, entry.Name())
 		if err != nil {
-			continue
+			return nil, err
 		}
 		builds = append(builds, build)
 	}
