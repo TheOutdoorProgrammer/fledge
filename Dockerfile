@@ -1,3 +1,11 @@
+FROM node:24-alpine AS browser
+WORKDIR /src
+COPY package.json package-lock.json ./
+RUN npm ci
+COPY browser/ ./browser/
+ARG COMMIT
+RUN APP_VERSION=${COMMIT} npm run build
+
 FROM golang:1.26-alpine AS build
 
 WORKDIR /src
@@ -6,6 +14,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
+COPY --from=browser /src/internal/web/assets/ ./internal/web/assets/
 
 ARG VERSION=dev
 ARG COMMIT=none

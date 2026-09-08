@@ -103,8 +103,13 @@ func (s *Server) handleWebAsset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "image/png")
-	w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+	if name == "telemetry.js" || name == "telemetry.js.map" {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Cache-Control", "no-cache")
+	} else {
+		w.Header().Set("Content-Type", "image/png")
+		w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+	}
 	http.ServeContent(w, r, name, time.Time{}, bytes.NewReader(asset))
 }
 

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/coreos/go-oidc/v3/oidc"
+	"github.com/theoutdoorprogrammer/fledge/internal/telemetry"
 )
 
 // GitHubIssuer mints the workload identity tokens GitHub Actions requests.
@@ -36,6 +37,7 @@ func New(ctx context.Context, issuer, audience string, policy Policy) (*Verifier
 		return nil, errors.New("oidc: a policy is required, or no repository could publish anything")
 	}
 
+	ctx = oidc.ClientContext(ctx, telemetry.HTTPClient(15*time.Second))
 	discovery, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 

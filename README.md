@@ -423,3 +423,13 @@ The reasoning behind the shape of this lives in [adr/](adr/), including why MDM 
 ## License
 
 Apache 2.0.
+
+## Error telemetry
+
+Set `OTEL_EXPORTER_OTLP_ENDPOINT` to Alloy's HTTP receiver on port 4318 for server traces. Without an endpoint, or with `OTEL_SDK_DISABLED=true`, traces are disabled. The standard `OTEL_SERVICE_NAME` and `OTEL_RESOURCE_ATTRIBUTES` configure service identity and version.
+
+HTTP failures, operation failures and recovered request panics produce correlated JSON logs and error spans. Official OTel HTTP instrumentation preserves streaming and WebSocket interfaces. Exported fields are restricted to safe operation names, error types, HTTP status, route templates and counters. Raw URLs, queries, headers, bodies, identifiers and exception messages are excluded. Graceful shutdown flushes pending spans; hard kills and collector outages can still lose data.
+
+Set `FARO_COLLECTOR_URL` at runtime to enable browser capture. The URL is public ingestion configuration and must have an origin allowlist in Grafana. No value means browser capture is disabled. The SDK is bundled from the versioned `@nerdswhofish/browser-telemetry` release with an integrity-checked lockfile. It captures browser exceptions, HTTP spans and web vitals for all tab sessions, with no replay, console capture, persistent identity or raw error text. Only explicitly allowed routes and operation codes survive filtering; dynamic paths and scripts become generic placeholders.
+
+Run `npm ci && npm run build` before Go builds or tests so the browser bundle and source map are embedded. `make build` performs both steps. Docker and release CI pass the full source revision as `COMMIT`; direct Docker builds must provide `--build-arg COMMIT=$(git rev-parse HEAD)`.

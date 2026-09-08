@@ -41,7 +41,7 @@ func (s *Server) handleLatest(w http.ResponseWriter, r *http.Request) {
 
 	latest, err := s.store.Latest(bundleID)
 	if err != nil {
-		s.failJSON(w, err)
+		s.failJSON(w, r, err)
 		return
 	}
 
@@ -50,7 +50,7 @@ func (s *Server) handleLatest(w http.ResponseWriter, r *http.Request) {
 	running := r.URL.Query().Get("build")
 	newer, err := s.store.Since(bundleID, running)
 	if err != nil {
-		s.failJSON(w, err)
+		s.failJSON(w, r, err)
 		return
 	}
 

@@ -1,0 +1,13 @@
+.git
+node_modules
+bin
+dist
+tmp
+coverage.out
+.env
+.env.*
+*.ipa
+*.xcarchive
+*.mobileprovision
+*.p8
+*.p12

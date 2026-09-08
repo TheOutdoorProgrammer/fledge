@@ -1,0 +1,11 @@
+{
+  "name": "fledge-browser-assets",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node browser/build.js"
+  },
+  "dependencies": {
+    "@nerdswhofish/browser-telemetry": "https://github.com/NerdsWhoFish/dusk/releases/download/v1.21.0/nerdswhofish-browser-telemetry-0.1.0.tgz"
+  }
+}

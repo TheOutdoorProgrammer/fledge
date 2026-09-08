@@ -7,6 +7,7 @@ import (
 	"strconv"
 
 	"github.com/theoutdoorprogrammer/fledge/internal/store"
+	"github.com/theoutdoorprogrammer/fledge/internal/telemetry"
 )
 
 // uploadResponse is what the CLI prints after a successful release.
@@ -120,10 +121,11 @@ func (s *Server) mayPublish(r *http.Request, bundleID string) error {
 	return s.workloads.Allows(who.identity, bundleID)
 }
 
-func (s *Server) handleListApps(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleListApps(w http.ResponseWriter, r *http.Request) {
 	bundles, err := s.store.Apps()
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		telemetry.RecordError(r.Context(), "api.request", err)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
@@ -137,7 +139,11 @@ func (s *Server) handleListApps(w http.ResponseWriter, _ *http.Request) {
 	apps := make([]entry, 0, len(bundles))
 	for _, bundle := range bundles {
 		builds, err := s.store.Builds(bundle)
-		if err != nil || len(builds) == 0 {
+		if err != nil {
+			s.failJSON(w, r, err)
+			return
+		}
+		if len(builds) == 0 {
 			continue
 		}
 		apps = append(apps, entry{
@@ -154,7 +160,7 @@ func (s *Server) handleListApps(w http.ResponseWriter, _ *http.Request) {
 func (s *Server) handleListBuilds(w http.ResponseWriter, r *http.Request) {
 	builds, err := s.store.Builds(r.PathValue("bundle"))
 	if err != nil {
-		s.failJSON(w, err)
+		s.failJSON(w, r, err)
 		return
 	}
 
@@ -163,29 +169,31 @@ func (s *Server) handleListBuilds(w http.ResponseWriter, r *http.Request) {
 
 func (s *Server) handleDeleteBuild(w http.ResponseWriter, r *http.Request) {
 	if err := s.store.Delete(r.PathValue("bundle"), r.PathValue("build")); err != nil {
-		s.failJSON(w, err)
+		s.failJSON(w, r, err)
 		return
 	}
 
 	w.WriteHeader(http.StatusNoContent)
 }
 
-func (s *Server) handleListDevices(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleListDevices(w http.ResponseWriter, r *http.Request) {
 	devices, err := s.store.Devices()
 	if err != nil {
-		writeJSONError(w, http.StatusInternalServerError, err.Error())
+		telemetry.RecordError(r.Context(), "api.request", err)
+		writeJSONError(w, http.StatusInternalServerError, "internal error")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"devices": devices})
 }
 
-func (s *Server) failJSON(w http.ResponseWriter, err error) {
+func (s *Server) failJSON(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, store.ErrNotFound) {
 		writeJSONError(w, http.StatusNotFound, "not found")
 		return
 	}
-	writeJSONError(w, http.StatusInternalServerError, err.Error())
+	telemetry.RecordError(r.Context(), "api.request", err)
+	writeJSONError(w, http.StatusInternalServerError, "internal error")
 }
 
 func writeJSON(w http.ResponseWriter, status int, value any) {
@@ -195,5 +203,8 @@ func writeJSON(w http.ResponseWriter, status int, value any) {
 }
 
 func writeJSONError(w http.ResponseWriter, status int, detail string) {
+	if status >= 500 {
+		detail = "internal error"
+	}
 	writeJSON(w, status, map[string]string{"error": detail})
 }

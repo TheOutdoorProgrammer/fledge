@@ -156,7 +156,7 @@ func (s *Store) Invites() ([]*Invite, error) {
 		}
 		invite, err := s.readInvite(entry.Name()[:len(entry.Name())-len(".json")])
 		if err != nil {
-			continue
+			return nil, err
 		}
 		invites = append(invites, invite)
 	}

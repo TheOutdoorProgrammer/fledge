@@ -102,11 +102,11 @@ func (s *Store) Devices() ([]*Device, error) {
 		}
 		raw, err := os.ReadFile(filepath.Join(s.root, "devices", entry.Name()))
 		if err != nil {
-			continue
+			return nil, err
 		}
 		var device Device
 		if err := json.Unmarshal(raw, &device); err != nil {
-			continue
+			return nil, err
 		}
 		devices = append(devices, &device)
 	}

@@ -44,6 +44,13 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci && npm run build
+
       - uses: TheOutdoorProgrammer/quill@v1
         with:
           bump: ${{ inputs.bump }}
